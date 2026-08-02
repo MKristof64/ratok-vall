@@ -321,37 +321,49 @@ export async function addSubmission(
 
   const submissionId = crypto.randomUUID();
   const revealSortKey = randomToken(32);
-  const inserted = await d1
-    .prepare(
-      `INSERT INTO submissions (
-         id, room_id, target_participant_id, body,
-         submission_key_hash, reveal_sort_key
-       )
-       SELECT ?, r.id, p.id, ?, ?, ?
-       FROM rooms AS r
-       INNER JOIN participants AS p
-         ON p.room_id = r.id AND p.id = ?
-       WHERE r.id = ? AND r.status = 'collecting'
-         AND (
-           SELECT COUNT(*)
-           FROM submissions AS room_submissions
-           WHERE room_submissions.room_id = r.id
-         ) < ?
-       ON CONFLICT (room_id, submission_key_hash) DO NOTHING
-       RETURNING id`,
-    )
-    .bind(
-      submissionId,
-      input.body,
-      submissionKeyHash,
-      revealSortKey,
-      input.targetId,
-      room.id,
-      MAX_SUBMISSIONS_PER_ROOM,
-    )
-    .all<{ id: string }>();
+  const [inserted] = await d1.batch([
+    d1
+      .prepare(
+        `INSERT INTO submissions (
+           id, room_id, target_participant_id, body,
+           submission_key_hash, reveal_sort_key
+         )
+         SELECT ?, r.id, p.id, ?, ?, ?
+         FROM rooms AS r
+         INNER JOIN participants AS p
+           ON p.room_id = r.id AND p.id = ?
+         WHERE r.id = ? AND r.status = 'collecting'
+           AND (
+             SELECT COUNT(*)
+             FROM submissions AS room_submissions
+             WHERE room_submissions.room_id = r.id
+           ) < ?
+         ON CONFLICT (room_id, submission_key_hash) DO NOTHING
+         RETURNING id`,
+      )
+      .bind(
+        submissionId,
+        input.body,
+        submissionKeyHash,
+        revealSortKey,
+        input.targetId,
+        room.id,
+        MAX_SUBMISSIONS_PER_ROOM,
+      ),
+    d1
+      .prepare(
+        `UPDATE rooms
+         SET version = version + 1, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND status = 'collecting'
+           AND EXISTS (
+             SELECT 1 FROM submissions
+             WHERE id = ? AND room_id = rooms.id
+           )`,
+      )
+      .bind(room.id, submissionId),
+  ]);
 
-  const insertedRow = inserted.results[0];
+  const insertedRow = (inserted.results as Array<{ id: string }>)[0];
   if (insertedRow) {
     return {
       submission: { id: insertedRow.id },
@@ -612,6 +624,55 @@ export async function finishRoom(
     .bind(room.id, room.version)
     .run();
   if (Number(result.meta.changes ?? 0) !== 1) {
+    throw new RoomRequestError(
+      409,
+      "room_changed",
+      "A szoba közben megváltozott. Próbáld újra.",
+    );
+  }
+  return getPublicRoom(code);
+}
+
+export async function restartRoom(
+  code: string,
+  rawHostToken: string | null,
+  accountId: string | null,
+) {
+  const room = await authorizeHost(code, rawHostToken, accountId);
+  if (room.status !== "finished") {
+    throw new RoomRequestError(
+      409,
+      "not_finished",
+      "Csak befejezett játék indítható újra.",
+    );
+  }
+
+  const d1 = getD1();
+  const [, restartResult] = await d1.batch([
+    d1
+      .prepare(
+        `UPDATE submissions
+         SET reveal_sort_key = lower(hex(randomblob(16))) || ':' || id
+         WHERE room_id = ?
+           AND EXISTS (
+             SELECT 1 FROM rooms
+             WHERE id = ? AND status = 'finished' AND version = ?
+           )`,
+      )
+      .bind(room.id, room.id, room.version),
+    d1
+      .prepare(
+        `UPDATE rooms
+         SET status = 'playing', current_card_index = 0,
+             current_target_revealed = 0, version = version + 1,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND status = 'finished' AND version = ?
+           AND EXISTS (SELECT 1 FROM submissions WHERE room_id = rooms.id)`,
+      )
+      .bind(room.id, room.version),
+  ]);
+
+  if (Number(restartResult.meta.changes ?? 0) !== 1) {
     throw new RoomRequestError(
       409,
       "room_changed",

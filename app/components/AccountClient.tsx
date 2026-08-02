@@ -48,7 +48,7 @@ export function AccountClient() {
         headers: { Accept: "application/json" },
       });
       if (response.status === 401) {
-        window.location.replace("/unlock?returnTo=%2Faccount");
+        window.location.replace("/unlock?returnTo=%2F");
         return;
       }
       if (!response.ok) throw new Error(await getApiError(response));
@@ -75,7 +75,7 @@ export function AccountClient() {
         headers: { Accept: "application/json" },
       });
       if (response.status === 401) {
-        window.location.replace("/unlock?returnTo=%2Faccount");
+        window.location.replace("/unlock?returnTo=%2F");
         return;
       }
       if (!response.ok) throw new Error(await getApiError(response));
@@ -138,7 +138,7 @@ export function AccountClient() {
         headers: { Accept: "application/json" },
       });
       if (response.status === 401) {
-        window.location.replace("/unlock?returnTo=%2Faccount");
+        window.location.replace("/unlock?returnTo=%2F");
         return;
       }
       if (!response.ok) throw new Error(await getApiError(response, "A játék nem törölhető."));
@@ -190,7 +190,7 @@ export function AccountClient() {
             <AccountLoginForm
               description="Ha korábban már regisztráltál, itt folytathatod."
               onSuccess={refreshAfterAuth}
-              returnTo="/account"
+              returnTo="/"
             />
           </div>
         </div>
@@ -218,7 +218,7 @@ export function AccountClient() {
                 <p className="eyebrow">Házigazda nézetek</p>
                 <h2 id="rooms-title">Saját játékok</h2>
               </div>
-              <a className="button button-primary" href="/">Új játék</a>
+              <a className="button button-primary" href="/new-game">Új játék</a>
             </div>
 
             {roomsError ? (
@@ -236,7 +236,7 @@ export function AccountClient() {
                 <span className="account-empty-symbol" aria-hidden="true">“</span>
                 <h3>Még nincs saját játékod.</h3>
                 <p>Indíts egy kört, majd oszd meg a meghívót a társasággal.</p>
-                <a className="button button-primary" href="/">Első játék indítása</a>
+                <a className="button button-primary" href="/new-game">Első játék indítása</a>
               </div>
             ) : null}
 

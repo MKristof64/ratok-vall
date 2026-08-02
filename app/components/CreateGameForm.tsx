@@ -27,7 +27,7 @@ export function CreateGameForm() {
         headers: { Accept: "application/json" },
       });
       if (response.status === 401) {
-        window.location.replace("/unlock?returnTo=%2F");
+        window.location.replace("/unlock?returnTo=%2Fnew-game");
         return;
       }
       if (!response.ok) throw new Error(await getApiError(response));
@@ -100,7 +100,7 @@ export function CreateGameForm() {
       });
 
       if (response.status === 401) {
-        window.location.assign("/unlock?returnTo=%2F");
+        window.location.assign("/unlock?returnTo=%2Fnew-game");
         return;
       }
 
@@ -158,7 +158,7 @@ export function CreateGameForm() {
           A fiók csak a saját játékaid kezelésére szolgál. A meghívottak továbbra is
           fiók nélkül, névtelenül küldhetnek be mondatokat.
         </p>
-        <a className="button button-primary button-full" href="/account">
+        <a className="button button-primary button-full" href="/">
           Fiók létrehozása vagy belépés <span aria-hidden="true">→</span>
         </a>
         <p className="form-footnote">Már beléptél a közös jelszóval, ezért regisztrálhatsz.</p>

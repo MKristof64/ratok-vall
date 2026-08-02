@@ -14,7 +14,7 @@ export function AccountLink({ compact = false }: { compact?: boolean }) {
     <a
       aria-label="Fiókom megnyitása"
       className={`account-link${compact ? " account-link-compact" : ""}`}
-      href="/account"
+      href="/"
     >
       <span className="account-link-mark" aria-hidden="true" />
       <span className="account-link-label">Fiókom</span>
