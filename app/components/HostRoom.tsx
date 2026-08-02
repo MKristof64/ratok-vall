@@ -281,11 +281,19 @@ export function HostRoom({ code }: { code: string }) {
     );
   }
 
+  const gameStarted = room.status !== "collecting";
+
   return (
-    <main className="game-shell host-shell">
-      <GameHeader aside={<span className="host-badge">Házigazda</span>} />
+    <main className={`game-shell host-shell${gameStarted ? " game-shell-immersive" : ""}`}>
+      {gameStarted ? null : (
+        <GameHeader aside={<span className="host-badge">Házigazda</span>} />
+      )}
       <div className="game-content host-content">
-        <HostRoomHeading room={room} />
+        {gameStarted ? (
+          <h1 className="sr-only">{room.title || "Névtelen kör"}</h1>
+        ) : (
+          <HostRoomHeading room={room} />
+        )}
 
         {error ? <div className="connection-note" role="status">A frissítés akadozik. Újra próbálkozunk…</div> : null}
         {actionError ? <div className="form-error action-error" role="alert"><span aria-hidden="true">!</span><p>{actionError}</p></div> : null}
@@ -426,25 +434,27 @@ export function HostRoom({ code }: { code: string }) {
           </section>
         ) : null}
 
-        <section className="danger-zone" aria-labelledby="danger-title">
-          <div>
-            <h2 id="danger-title">Játék törlése</h2>
-            <p>A mondatok és a játék hivatkozása végleg megszűnik.</p>
-          </div>
-          {confirmDelete ? (
-            <div className="delete-confirm" role="alert">
-              <span>Biztosan törlöd?</span>
-              <button className="button button-danger" disabled={busy !== null} onClick={deleteRoom} type="button">
-                {busy === "delete" ? "Törlés…" : "Igen, törlöm"}
-              </button>
-              <button className="button button-quiet" onClick={() => setConfirmDelete(false)} type="button">Mégsem</button>
+        {room.status === "collecting" ? (
+          <section className="danger-zone" aria-labelledby="danger-title">
+            <div>
+              <h2 id="danger-title">Játék törlése</h2>
+              <p>A mondatok és a játék hivatkozása végleg megszűnik.</p>
             </div>
-          ) : (
-            <button className="button button-quiet danger-trigger" onClick={() => setConfirmDelete(true)} type="button">
-              Játék törlése
-            </button>
-          )}
-        </section>
+            {confirmDelete ? (
+              <div className="delete-confirm" role="alert">
+                <span>Biztosan törlöd?</span>
+                <button className="button button-danger" disabled={busy !== null} onClick={deleteRoom} type="button">
+                  {busy === "delete" ? "Törlés…" : "Igen, törlöm"}
+                </button>
+                <button className="button button-quiet" onClick={() => setConfirmDelete(false)} type="button">Mégsem</button>
+              </div>
+            ) : (
+              <button className="button button-quiet danger-trigger" onClick={() => setConfirmDelete(true)} type="button">
+                Játék törlése
+              </button>
+            )}
+          </section>
+        ) : null}
       </div>
     </main>
   );
