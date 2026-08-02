@@ -77,8 +77,11 @@ const SESSION_COOKIE_NAME = "__Host-mondat_session";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const SESSION_CLOCK_SKEW_SECONDS = 60;
 const SESSION_SECRET_MIN_BYTES = 32;
-const MIN_PASSWORD_ITERATIONS = 100_000;
-const ACCOUNT_PASSWORD_ITERATIONS = 150_000;
+// Cloudflare Workers Web Crypto currently accepts PBKDF2 iteration counts up
+// to 100,000. Keep verifier parsing pinned to that supported value so a bad
+// record or secret fails closed instead of crashing the Worker at runtime.
+const PASSWORD_ITERATIONS = 100_000;
+const ACCOUNT_PASSWORD_ITERATIONS = PASSWORD_ITERATIONS;
 const ACCOUNT_PASSWORD_MIN_CHARACTERS = 12;
 const ACCOUNT_PASSWORD_SALT_BYTES = 16;
 const MAX_COOKIE_LENGTH = 2_048;
@@ -616,8 +619,7 @@ function parsePasswordVerifier(value: string | undefined): PasswordVerifier | nu
   const iterations = Number(parts[1]);
   if (
     !Number.isSafeInteger(iterations) ||
-    iterations < MIN_PASSWORD_ITERATIONS ||
-    iterations > 10_000_000
+    iterations !== PASSWORD_ITERATIONS
   ) {
     return null;
   }
@@ -640,8 +642,7 @@ function parsePasswordVerifier(value: string | undefined): PasswordVerifier | nu
 function parseAccountVerifier(account: StoredAccount): PasswordVerifier | null {
   if (
     !Number.isSafeInteger(account.passwordIterations) ||
-    account.passwordIterations < ACCOUNT_PASSWORD_ITERATIONS ||
-    account.passwordIterations > 10_000_000
+    account.passwordIterations !== ACCOUNT_PASSWORD_ITERATIONS
   ) {
     return null;
   }
