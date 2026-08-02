@@ -1,25 +1,21 @@
 import {
   codeFromContext,
-  readRoomJson,
   roomErrorResponse,
   roomJson,
   trustedAccountIdFromRequest,
 } from "@/lib/room-api";
-import { updateRoomSettings } from "@/lib/room-service";
-import { parseSettingsInput } from "@/lib/room-validation";
+import { getRoomHostAccess } from "@/lib/room-service";
 
 type RouteContext = { params: Promise<{ code: string }> };
 
-export async function PATCH(request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   try {
-    const input = parseSettingsInput(await readRoomJson(request));
-    const room = await updateRoomSettings(
+    const access = await getRoomHostAccess(
       await codeFromContext(context),
       request.headers.get("x-host-token"),
       trustedAccountIdFromRequest(request),
-      input,
     );
-    return roomJson({ room });
+    return roomJson(access);
   } catch (error) {
     return roomErrorResponse(error);
   }

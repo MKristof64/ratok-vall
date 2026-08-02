@@ -2,6 +2,7 @@ import {
   codeFromContext,
   roomErrorResponse,
   roomJson,
+  trustedAccountIdFromRequest,
 } from "@/lib/room-api";
 import { finishRoom } from "@/lib/room-service";
 
@@ -12,6 +13,7 @@ export async function POST(request: Request, context: RouteContext) {
     const room = await finishRoom(
       await codeFromContext(context),
       request.headers.get("x-host-token"),
+      trustedAccountIdFromRequest(request),
     );
     return roomJson({ room });
   } catch (error) {

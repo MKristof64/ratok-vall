@@ -13,7 +13,7 @@ export default function UnlockPage() {
       <div className="unlock-wrap">
         <UnlockForm />
         <p className="unlock-privacy">
-          Nem kérünk nevet, e-mail-címet vagy felhasználói fiókot.
+          A mondatok beküldéséhez nem kérünk nevet, e-mail-címet vagy felhasználói fiókot.
         </p>
       </div>
     </main>

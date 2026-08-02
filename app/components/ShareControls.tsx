@@ -71,3 +71,26 @@ export function ShareControls({
     </div>
   );
 }
+
+export function CopyInviteButton({ url }: { url: string }) {
+  const [status, setStatus] = useState<string | null>(null);
+
+  const copy = async () => {
+    try {
+      await copyText(url);
+      setStatus("Másolva");
+      window.setTimeout(() => setStatus(null), 2200);
+    } catch {
+      setStatus("Nem sikerült");
+    }
+  };
+
+  return (
+    <div className="room-copy-action">
+      <button className="button button-secondary" onClick={copy} type="button">
+        Meghívó másolása
+      </button>
+      <span className="copy-status" role="status" aria-live="polite">{status}</span>
+    </div>
+  );
+}

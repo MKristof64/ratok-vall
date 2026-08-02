@@ -15,6 +15,11 @@ import { useRoomPolling } from "./useRoomPolling";
 
 type ActionName = "settings" | "start" | "reveal" | "next" | "finish" | "delete";
 
+type HostAccessResponse = {
+  hasHostAccess: boolean;
+  via: "account" | "token" | null;
+};
+
 function HostRoomHeading({ room }: { room: GameRoom }) {
   const labels = {
     collecting: "Gyűjtés folyamatban",
@@ -61,6 +66,7 @@ function HostPanel({
 export function HostRoom({ code }: { code: string }) {
   const { room, setRoom, loading, error, notFound, refresh } = useRoomPolling(code, 2200);
   const [hostToken, setHostToken] = useState<string | null>(null);
+  const [accountHostAccess, setAccountHostAccess] = useState<boolean | null>(null);
   const [inviteUrl, setInviteUrl] = useState("");
   const [busy, setBusy] = useState<ActionName | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -68,6 +74,7 @@ export function HostRoom({ code }: { code: string }) {
   const cardTitleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
+    let active = true;
     const storageKey = `ratok-vall-host-${code}`;
     const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const tokenFromUrl = fragment.get("host");
@@ -79,10 +86,49 @@ export function HostRoom({ code }: { code: string }) {
         `${window.location.pathname}${window.location.search}`,
       );
       setHostToken(tokenFromUrl);
+      setAccountHostAccess(false);
     } else {
-      setHostToken(window.sessionStorage.getItem(storageKey) || "");
+      const storedToken = window.sessionStorage.getItem(storageKey);
+      if (storedToken) {
+        setHostToken(storedToken);
+        setAccountHostAccess(false);
+      } else {
+        setHostToken("");
+        setAccountHostAccess(null);
+        void (async () => {
+          try {
+            const response = await fetch(
+              `/api/rooms/${encodeURIComponent(code)}/host-access`,
+              {
+                credentials: "same-origin",
+                cache: "no-store",
+                headers: { Accept: "application/json" },
+              },
+            );
+            if (response.status === 401) {
+              const returnTo = `${window.location.pathname}${window.location.search}`;
+              window.location.replace(`/unlock?returnTo=${encodeURIComponent(returnTo)}`);
+              return;
+            }
+            if (!response.ok) {
+              if (active) setAccountHostAccess(false);
+              return;
+            }
+            const payload = (await response.json()) as HostAccessResponse;
+            if (active) setAccountHostAccess(payload.hasHostAccess === true);
+          } catch {
+            if (active) {
+              setAccountHostAccess(false);
+              setActionError("A házigazda-hozzáférés most nem ellenőrizhető.");
+            }
+          }
+        })();
+      }
     }
     setInviteUrl(`${window.location.origin}/room/${encodeURIComponent(code)}`);
+    return () => {
+      active = false;
+    };
   }, [code]);
 
   const cardKey = `${room?.currentIndex ?? -1}:${room?.currentCard?.id ?? "none"}`;
@@ -96,14 +142,16 @@ export function HostRoom({ code }: { code: string }) {
     method: "POST" | "PATCH" | "DELETE" = "POST",
     body?: Record<string, unknown>,
   ) => {
-    if (!hostToken) throw new Error("A házigazda-hozzáférés hiányzik.");
+    if (!hostToken && accountHostAccess !== true) {
+      throw new Error("A házigazda-hozzáférés hiányzik.");
+    }
     const response = await fetch(`/api/rooms/${encodeURIComponent(code)}${path}`, {
       method,
       credentials: "same-origin",
       headers: {
         ...(body ? { "Content-Type": "application/json" } : {}),
         Accept: "application/json",
-        "x-host-token": hostToken,
+        ...(hostToken ? { "x-host-token": hostToken } : {}),
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
@@ -114,7 +162,7 @@ export function HostRoom({ code }: { code: string }) {
       throw new Error("Új belépés szükséges.");
     }
     if (response.status === 403) {
-      throw new Error("Ez a házigazda-hivatkozás nem érvényes.");
+      throw new Error("Nincs jogosultságod ennek a játéknak a kezeléséhez.");
     }
     if (!response.ok) throw new Error(await getApiError(response));
     if (response.status === 204) return null;
@@ -191,23 +239,14 @@ export function HostRoom({ code }: { code: string }) {
     [room?.currentCard?.index, room?.currentIndex],
   );
 
-  if (loading && !room) {
+  const checkingHostAccess =
+    hostToken === null || (hostToken === "" && accountHostAccess === null);
+
+  if ((loading && !room) || checkingHostAccess) {
     return (
       <main className="game-shell">
         <GameHeader />
         <LoadingView label="A házigazda nézet betöltése…" />
-      </main>
-    );
-  }
-
-  if (hostToken === "") {
-    return (
-      <main className="game-shell">
-        <GameHeader />
-        <ErrorView
-          title="Hiányzik a házigazda-hozzáférés"
-          message="Ezt az oldalt a játék létrehozásakor kapott házigazda-hivatkozással nyisd meg."
-        />
       </main>
     );
   }
@@ -221,11 +260,23 @@ export function HostRoom({ code }: { code: string }) {
     );
   }
 
-  if (!room || hostToken === null) {
+  if (hostToken === "" && accountHostAccess === false) {
     return (
       <main className="game-shell">
         <GameHeader />
-        {hostToken === null ? <LoadingView /> : <ErrorView message={error || undefined} onRetry={() => void refresh()} />}
+        <ErrorView
+          title="Nincs hozzáférésed ehhez a játékhoz"
+          message="Jelentkezz be a játék tulajdonosának fiókjával, vagy nyisd meg az eredeti házigazda-hivatkozást."
+        />
+      </main>
+    );
+  }
+
+  if (!room) {
+    return (
+      <main className="game-shell">
+        <GameHeader />
+        <ErrorView message={error || undefined} onRetry={() => void refresh()} />
       </main>
     );
   }

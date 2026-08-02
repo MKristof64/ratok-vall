@@ -55,7 +55,7 @@ after(async () => {
   ]);
 });
 
-test("renders the Hungarian password entry page", async () => {
+test("renders the Hungarian account and guest entry page", async () => {
   const response = await fetch(`${baseUrl}/unlock`, {
     headers: { accept: "text/html" },
     redirect: "manual",
@@ -69,7 +69,10 @@ test("renders the Hungarian password entry page", async () => {
   const html = await response.text();
   assert.match(html, /<html[^>]*lang=["']hu["']/i);
   assert.match(html, /Rátok vall/);
-  assert.match(html, /Belépés a játékhoz/);
+  assert.match(html, /Hogyan szeretnél belépni\?/);
+  assert.match(html, /Belépés fiókkal/);
+  assert.match(html, /Belépés közös jelszóval/);
+  assert.match(html, /előbb lépj be a közös jelszóval/);
   assert.doesNotMatch(html, /Your site is taking shape|react-loading-skeleton/i);
 });
 
@@ -90,15 +93,18 @@ test("protects browser pages and APIs before a valid session", async () => {
   assert.match(apiResponse.headers.get("cache-control") ?? "", /no-store/i);
 });
 
-test("removes the starter preview and identity-based auth surface", async () => {
-  const [page, layout, packageJson] = await Promise.all([
+test("removes the starter preview and legacy provider auth surface", async () => {
+  const [page, layout, accountPage, packageJson] = await Promise.all([
     readFile(new URL("app/page.tsx", projectRoot), "utf8"),
     readFile(new URL("app/layout.tsx", projectRoot), "utf8"),
+    readFile(new URL("app/account/page.tsx", projectRoot), "utf8"),
     readFile(new URL("package.json", projectRoot), "utf8"),
   ]);
 
   assert.match(page, /Rátok vall|Egy mondat/);
+  assert.match(page, /AccountLink/);
   assert.match(layout, /lang="hu"/);
+  assert.match(accountPage, /AccountClient/);
   assert.doesNotMatch(page, /_sites-preview|codex-preview/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await assert.rejects(

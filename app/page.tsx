@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AppFooter, Brand } from "./components/AppChrome";
+import { AccountLink, AppFooter, Brand } from "./components/AppChrome";
 import { CreateGameForm } from "./components/CreateGameForm";
 
 export const metadata: Metadata = {
@@ -13,7 +13,10 @@ export default function Home() {
     <main className="site-shell">
       <header className="topbar">
         <Brand />
-        <span className="privacy-chip">Nincs regisztráció</span>
+        <div className="topbar-actions home-topbar-actions">
+          <span className="privacy-chip">Névtelen beküldés</span>
+          <AccountLink />
+        </div>
       </header>
 
       <section className="hero" aria-labelledby="home-title">
@@ -25,8 +28,8 @@ export default function Home() {
             ki együtt, kire gondolhatott a beküldő.
           </p>
           <div className="trust-row" aria-label="A játék fő előnyei">
-            <span>Fiók nélkül</span>
-            <span>Anonim beküldés</span>
+            <span>Fiók nélkül beküldhető</span>
+            <span>Névtelen mondatok</span>
             <span>Egyetlen linkkel</span>
           </div>
         </div>
@@ -63,8 +66,9 @@ export default function Home() {
         <div>
           <h2 id="privacy-title">A mondat számít, nem az, ki írta.</h2>
           <p>
-            Nem kérünk nevet, e-mail-címet vagy felhasználói fiókot. A
-            beküldő személye nem jelenik meg a játékban.
+            A mondatok beküldéséhez nem kérünk nevet, e-mail-címet vagy fiókot.
+            A házigazda fiókja csak a saját játékai kezelésére szolgál; a
+            beküldők személye nem kapcsolódik a mondataikhoz.
           </p>
         </div>
       </section>

@@ -2,6 +2,7 @@ import {
   codeFromContext,
   roomErrorResponse,
   roomJson,
+  trustedAccountIdFromRequest,
 } from "@/lib/room-api";
 import { deleteRoom, getPublicRoom } from "@/lib/room-service";
 
@@ -20,6 +21,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     await deleteRoom(
       await codeFromContext(context),
       request.headers.get("x-host-token"),
+      trustedAccountIdFromRequest(request),
     );
     return roomJson({ deleted: true });
   } catch (error) {

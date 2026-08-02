@@ -13,6 +13,23 @@ export function roomJson(value: unknown, status = 200) {
   });
 }
 
+export function trustedAccountIdFromRequest(request: Request) {
+  const value = request.headers.get("x-ratok-account-id")?.trim();
+  return value && /^[A-Za-z0-9_-]{1,128}$/.test(value) ? value : null;
+}
+
+export function requireTrustedAccountId(request: Request) {
+  const accountId = trustedAccountIdFromRequest(request);
+  if (!accountId) {
+    throw new RoomRequestError(
+      403,
+      "account_required",
+      "A művelethez bejelentkezett fiók szükséges.",
+    );
+  }
+  return accountId;
+}
+
 export async function readRoomJson(request: Request) {
   const contentLength = Number(request.headers.get("content-length") ?? "0");
   if (Number.isFinite(contentLength) && contentLength > 64 * 1024) {

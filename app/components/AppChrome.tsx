@@ -9,11 +9,35 @@ export function Brand() {
   );
 }
 
-export function GameHeader({ aside }: { aside?: ReactNode }) {
+export function AccountLink({ compact = false }: { compact?: boolean }) {
+  return (
+    <a
+      aria-label="Fiókom megnyitása"
+      className={`account-link${compact ? " account-link-compact" : ""}`}
+      href="/account"
+    >
+      <span className="account-link-mark" aria-hidden="true" />
+      <span className="account-link-label">Fiókom</span>
+    </a>
+  );
+}
+
+export function GameHeader({
+  aside,
+  showAccountLink = true,
+}: {
+  aside?: ReactNode;
+  showAccountLink?: boolean;
+}) {
   return (
     <header className="game-topbar">
       <Brand />
-      {aside ? <div className="topbar-actions">{aside}</div> : null}
+      {aside || showAccountLink ? (
+        <div className="topbar-actions">
+          {aside}
+          {showAccountLink ? <AccountLink compact /> : null}
+        </div>
+      ) : null}
     </header>
   );
 }
