@@ -128,3 +128,26 @@ test("removes the two retired homepage sections and their styles", async () => {
     /\.how-it-works|\.steps-grid|\.step-card|\.step-number|\.privacy-note|\.privacy-symbol/,
   );
 });
+
+test("keeps target choices random and the started game screen distraction free", async () => {
+  const [guestRoom, hostRoom, styles, account] = await Promise.all([
+    readFile(new URL("app/components/RoomGuest.tsx", projectRoot), "utf8"),
+    readFile(new URL("app/components/HostRoom.tsx", projectRoot), "utf8"),
+    readFile(new URL("app/globals.css", projectRoot), "utf8"),
+    readFile(new URL("app/components/AccountClient.tsx", projectRoot), "utf8"),
+  ]);
+
+  assert.match(guestRoom, /shuffleWithSeed\(room\?\.participants \?\? \[\], targetOrderSeed\)/);
+  assert.match(guestRoom, /randomizedParticipants\.map/);
+  assert.match(guestRoom, /gameStarted \? null : \(/);
+  assert.doesNotMatch(guestRoom, /host-controls-note/);
+  assert.doesNotMatch(guestRoom, /A játékot a házigazda irányítja/);
+
+  assert.match(hostRoom, /const gameStarted = room\.status !== "collecting"/);
+  assert.match(hostRoom, /room\.status === "collecting" \? \(\s*<section className="danger-zone"/);
+  assert.match(account, /onClick=\{\(\) => void deleteRoom\(room\.code\)\}/);
+
+  assert.match(styles, /\.game-shell-immersive\s*\{[^}]*height: 100dvh;/s);
+  assert.match(styles, /grid-template-rows: auto auto minmax\(0, 1fr\)/);
+  assert.match(styles, /\.game-shell-immersive \.reveal-card,[\s\S]*?min-height: 0;/);
+});

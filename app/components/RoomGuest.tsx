@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { createRandomSeed, shuffleWithSeed } from "@/lib/random-order";
 import { ErrorView, GameHeader, LoadingView, StatusPill } from "./AppChrome";
 import { ShareControls } from "./ShareControls";
 import {
@@ -53,6 +54,7 @@ export function RoomGuest({ code }: { code: string }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [inviteUrl, setInviteUrl] = useState("");
+  const [targetOrderSeed, setTargetOrderSeed] = useState(createRandomSeed);
   const cardTitleRef = useRef<HTMLHeadingElement>(null);
   const submissionKeyRef = useRef<string | null>(null);
 
@@ -81,6 +83,11 @@ export function RoomGuest({ code }: { code: string }) {
       ? "A választás csak a felfedéskor jelenik meg."
       : "A választás ebben a játékban nem jelenik meg a végén.";
   }, [room]);
+
+  const randomizedParticipants = useMemo(
+    () => shuffleWithSeed(room?.participants ?? [], targetOrderSeed),
+    [room?.participants, targetOrderSeed],
+  );
 
   const submitSentence = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -132,6 +139,7 @@ export function RoomGuest({ code }: { code: string }) {
       submissionKeyRef.current = null;
       setBody("");
       setTargetId("");
+      setTargetOrderSeed(createRandomSeed());
       setSubmitted(true);
       await refresh();
     } catch (requestError) {
@@ -176,12 +184,19 @@ export function RoomGuest({ code }: { code: string }) {
   }
 
   const total = getTotalSubmissions(room);
+  const gameStarted = room.status !== "collecting";
 
   return (
-    <main className="game-shell">
-      <GameHeader aside={inviteUrl ? <ShareControls compact url={inviteUrl} /> : null} />
+    <main className={`game-shell${gameStarted ? " game-shell-immersive" : ""}`}>
+      {gameStarted ? null : (
+        <GameHeader aside={inviteUrl ? <ShareControls compact url={inviteUrl} /> : null} />
+      )}
       <div className="game-content">
-        <RoomStatusHeader title={room.title} status={room.status} />
+        {gameStarted ? (
+          <h1 className="sr-only">{room.title || "Névtelen kör"}</h1>
+        ) : (
+          <RoomStatusHeader title={room.title} status={room.status} />
+        )}
 
         {error ? (
           <div className="connection-note" role="status">
@@ -248,7 +263,7 @@ export function RoomGuest({ code }: { code: string }) {
                     value={targetId}
                   >
                     <option value="">Válassz célpontot</option>
-                    {room.participants.map((participant) => (
+                    {randomizedParticipants.map((participant) => (
                       <option key={participant.id} value={participant.id}>{participant.name}</option>
                     ))}
                   </select>
@@ -293,7 +308,7 @@ export function RoomGuest({ code }: { code: string }) {
                 ) : (
                   <p className="waiting-for-host">
                     {room.revealTargetNames
-                      ? "Tippeljetek! A házigazda hamarosan felfedi a célpontot."
+                      ? "Tippeljetek! Hamarosan kiderül a célpont."
                       : "Beszéljétek meg együtt, kire illik a legjobban."}
                   </p>
                 )}
@@ -301,7 +316,6 @@ export function RoomGuest({ code }: { code: string }) {
             ) : (
               <LoadingView label="A következő mondatra várunk…" />
             )}
-            <p className="host-controls-note">A játékot a házigazda irányítja.</p>
           </section>
         ) : null}
 

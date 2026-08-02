@@ -646,8 +646,7 @@ textarea:focus {
 .unlock-footnote,
 .kindness-note,
 .button-help,
-.settings-footnote,
-.host-controls-note {
+.settings-footnote {
   margin: 10px 0 0;
   color: var(--soft);
   font-size: 0.74rem;
@@ -1169,10 +1168,6 @@ textarea:focus {
   margin: 0;
   color: var(--muted);
   font-size: 0.86rem;
-}
-
-.host-controls-note {
-  margin-top: 15px;
 }
 
 .finished-card {
@@ -2155,6 +2150,104 @@ textarea:focus {
   .submission-card,
   .host-panel {
     border: 1px solid CanvasText;
+  }
+}
+
+/* Indítás után a játék egyetlen, fókuszált képernyőt tölt ki. */
+.game-shell-immersive {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  min-height: 100svh;
+  overflow-y: auto;
+  padding: clamp(12px, 2vw, 28px);
+}
+
+.game-shell-immersive .game-content {
+  display: flex;
+  width: min(100%, 1180px);
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  padding: 0;
+}
+
+.game-shell-immersive .connection-note,
+.game-shell-immersive .action-error {
+  flex: 0 0 auto;
+  margin: 0 0 clamp(8px, 1.5vh, 14px);
+}
+
+.game-shell-immersive .play-stage,
+.game-shell-immersive .host-play-stage {
+  display: grid;
+  width: min(100%, 1100px);
+  min-height: 0;
+  flex: 1;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.game-shell-immersive .host-play-stage {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  padding-top: 0;
+}
+
+.game-shell-immersive .progress-row {
+  margin-bottom: clamp(5px, 1vh, 8px);
+}
+
+.game-shell-immersive .progress-track {
+  margin-bottom: clamp(8px, 1.5vh, 16px);
+}
+
+.game-shell-immersive .reveal-card,
+.game-shell-immersive .host-reveal-card {
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: clamp(48px, 7vh, 76px) clamp(20px, 5vw, 60px) clamp(22px, 4vh, 38px);
+}
+
+.game-shell-immersive .center-state {
+  min-height: 0;
+}
+
+.game-shell-immersive .play-controls {
+  flex: 0 0 auto;
+  margin-top: clamp(8px, 1.5vh, 16px);
+}
+
+.game-shell-immersive .success-card {
+  min-height: 0;
+  flex: 1;
+  margin: 0 auto;
+  overflow-y: auto;
+}
+
+@media (max-height: 680px) {
+  .game-shell-immersive .large-quote {
+    top: 14px;
+    font-size: 3rem;
+  }
+
+  .game-shell-immersive .reveal-card,
+  .game-shell-immersive .host-reveal-card {
+    padding-block: 38px 18px;
+  }
+
+  .game-shell-immersive .reveal-card h2 {
+    margin-bottom: 14px;
+    font-size: clamp(1.45rem, 5.5vw, 2.6rem);
+  }
+
+  .game-shell-immersive .reveal-label {
+    margin-bottom: 7px;
+  }
+
+  .game-shell-immersive .button-large {
+    min-height: 46px;
   }
 }
 
