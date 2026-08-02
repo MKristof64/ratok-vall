@@ -37,42 +37,6 @@ export default function Home() {
         <CreateGameForm />
       </section>
 
-      <section className="how-it-works" aria-labelledby="how-title">
-        <div className="section-heading">
-          <p className="eyebrow">Így működik</p>
-          <h2 id="how-title">Három egyszerű lépés</h2>
-        </div>
-        <ol className="steps-grid">
-          <li className="step-card">
-            <span className="step-number">1</span>
-            <h3>Állítsd össze</h3>
-            <p>Add meg a társaság tagjainak nevét vagy becenevét.</p>
-          </li>
-          <li className="step-card">
-            <span className="step-number">2</span>
-            <h3>Oszd meg</h3>
-            <p>Küldd el a meghívót. Mindenki név nélkül írhat mondatokat.</p>
-          </li>
-          <li className="step-card">
-            <span className="step-number">3</span>
-            <h3>Fedjétek fel</h3>
-            <p>Olvassátok végig a kártyákat, és találjátok ki, kiről szólnak.</p>
-          </li>
-        </ol>
-      </section>
-
-      <section className="privacy-note" aria-labelledby="privacy-title">
-        <div className="privacy-symbol" aria-hidden="true">•••</div>
-        <div>
-          <h2 id="privacy-title">A mondat számít, nem az, ki írta.</h2>
-          <p>
-            A mondatok beküldéséhez nem kérünk nevet, e-mail-címet vagy fiókot.
-            A házigazda fiókja csak a saját játékai kezelésére szolgál; a
-            beküldők személye nem kapcsolódik a mondataikhoz.
-          </p>
-        </div>
-      </section>
-
       <AppFooter />
     </main>
   );

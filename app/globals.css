@@ -655,105 +655,6 @@ textarea:focus {
   text-align: center;
 }
 
-.how-it-works {
-  padding: 52px 0 68px;
-  border-top: 1px solid var(--line);
-}
-
-.section-heading {
-  max-width: 520px;
-  margin-bottom: 24px;
-}
-
-.section-heading h2,
-.privacy-note h2 {
-  margin-bottom: 0;
-  font-size: clamp(1.75rem, 5vw, 2.6rem);
-  font-weight: 750;
-  letter-spacing: -0.045em;
-  line-height: 1.1;
-}
-
-.steps-grid {
-  display: grid;
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.step-card {
-  position: relative;
-  min-height: 180px;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: rgb(255 253 249 / 60%);
-  padding: 22px;
-}
-
-.step-number {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  margin-bottom: 26px;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent-dark);
-  font-size: 0.78rem;
-  font-weight: 780;
-}
-
-.step-card h3 {
-  margin-bottom: 7px;
-  font-size: 1.08rem;
-  font-weight: 730;
-  letter-spacing: -0.02em;
-}
-
-.step-card p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.privacy-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 18px;
-  margin: 16px 0 74px;
-  border-radius: var(--radius-lg);
-  background: var(--ink);
-  color: white;
-  padding: 26px 22px;
-}
-
-.privacy-symbol {
-  display: grid;
-  width: 48px;
-  height: 48px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 15px 15px 15px 5px;
-  background: var(--accent);
-  color: white;
-  font-size: 0.85rem;
-  letter-spacing: 0.15em;
-}
-
-.privacy-note h2 {
-  margin-bottom: 9px;
-  font-size: clamp(1.35rem, 4.8vw, 2.1rem);
-}
-
-.privacy-note p {
-  max-width: 700px;
-  margin-bottom: 0;
-  color: #d9d2ca;
-  font-size: 0.9rem;
-}
-
 .footer {
   display: flex;
   min-height: 100px;
@@ -1486,16 +1387,6 @@ textarea:focus {
     padding: 28px;
   }
 
-  .steps-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .privacy-note {
-    align-items: center;
-    gap: 24px;
-    padding: 34px;
-  }
-
   .footer {
     flex-direction: row;
     align-items: center;
@@ -1569,14 +1460,6 @@ textarea:focus {
   .topbar,
   .game-topbar {
     min-height: 84px;
-  }
-
-  .how-it-works {
-    padding-block: 76px 88px;
-  }
-
-  .privacy-note {
-    margin-bottom: 92px;
   }
 
   .game-content {
@@ -1771,43 +1654,6 @@ textarea:focus {
   transform: translateY(-2px);
 }
 
-.step-card {
-  position: relative;
-  overflow: hidden;
-  border-color: rgb(124 58 237 / 16%);
-  background: rgb(255 255 255 / 72%);
-  box-shadow: 0 15px 34px rgb(58 32 75 / 8%);
-}
-
-.step-card::before {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, var(--accent), var(--party-pink), var(--party-purple));
-  content: "";
-}
-
-.step-card:nth-child(2)::before {
-  background: linear-gradient(90deg, var(--party-purple), var(--party-cyan));
-}
-
-.step-card:nth-child(3)::before {
-  background: linear-gradient(90deg, var(--party-cyan), var(--party-yellow), var(--accent));
-}
-
-.privacy-note {
-  border-color: rgb(124 58 237 / 18%);
-  background: linear-gradient(135deg, rgb(255 255 255 / 80%), rgb(246 238 255 / 82%));
-  color: var(--ink);
-  box-shadow: 0 18px 46px rgb(58 32 75 / 8%);
-}
-
-.privacy-note p {
-  color: var(--muted);
-}
-
 .status-live {
   border-color: rgb(236 72 153 / 28%);
   background: #fff0f8;
@@ -1942,8 +1788,7 @@ body {
 }
 
 .brand-mark,
-.unlock-symbol,
-.privacy-symbol {
+.unlock-symbol {
   background: linear-gradient(145deg, #7c3aed, #d72d87 52%, #d84d23);
   box-shadow:
     0 0 18px rgb(168 85 247 / 42%),
@@ -1981,7 +1826,6 @@ body {
 
 .hero-lead,
 .trust-row,
-.step-card p,
 .unlock-lead,
 .unlock-privacy,
 .submission-lead,
@@ -2136,35 +1980,9 @@ textarea:focus {
   color: #fff;
 }
 
-.how-it-works,
 .footer,
 .game-topbar {
   border-color: rgb(93 70 121 / 48%);
-}
-
-.step-card {
-  border-color: rgb(145 93 190 / 34%);
-  background: linear-gradient(145deg, rgb(24 18 43 / 84%), rgb(13 11 28 / 74%));
-  box-shadow: 0 18px 44px rgb(0 0 0 / 30%), inset 0 1px rgb(255 255 255 / 4%);
-}
-
-.step-number {
-  background: #2b1740;
-  color: #f2c6ff;
-  box-shadow: 0 0 18px rgb(168 85 247 / 14%);
-}
-
-.privacy-note {
-  border: 1px solid rgb(168 85 247 / 38%);
-  background:
-    radial-gradient(circle at 90% 20%, rgb(34 211 238 / 9%), transparent 17rem),
-    linear-gradient(135deg, rgb(27 18 48 / 94%), rgb(12 11 28 / 96%));
-  color: var(--ink);
-  box-shadow: 0 24px 62px rgb(0 0 0 / 32%), inset 0 1px rgb(255 255 255 / 4%);
-}
-
-.privacy-note p {
-  color: var(--muted);
 }
 
 .status-pill {
