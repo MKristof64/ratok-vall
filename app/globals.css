@@ -1,28 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --canvas: #fff7f2;
-  --canvas-deep: #f3e8ff;
-  --surface: #fffdfb;
-  --surface-strong: #ffffff;
-  --ink: #21172e;
-  --muted: #6b6074;
-  --soft: #786b80;
-  --line: #e5d9ea;
-  --line-strong: #cdbed6;
-  --accent: #ff6435;
-  --accent-dark: #c73716;
-  --accent-soft: #fff0e9;
-  --party-purple: #7c3aed;
-  --party-pink: #ec4899;
-  --party-cyan: #0891b2;
-  --party-yellow: #f7b928;
-  --success: #237353;
-  --success-soft: #e9f5ef;
-  --danger: #ad332b;
-  --danger-soft: #fff0ed;
-  --shadow-sm: 0 1px 2px rgb(44 34 25 / 5%), 0 6px 20px rgb(44 34 25 / 5%);
-  --shadow-lg: 0 24px 60px rgb(55 40 27 / 11%);
+  color-scheme: dark;
+  --canvas: #080612;
+  --canvas-deep: #130d25;
+  --surface: #151126;
+  --surface-strong: #1b1630;
+  --ink: #f8f4ff;
+  --muted: #c7bdd8;
+  --soft: #afa4c0;
+  --line: #3c3155;
+  --line-strong: #5b4b75;
+  --accent: #ff7849;
+  --accent-dark: #ff9d73;
+  --accent-soft: #321a25;
+  --party-purple: #a855f7;
+  --party-pink: #ff4fa3;
+  --party-cyan: #22d3ee;
+  --party-yellow: #ffd166;
+  --success: #6ee7b7;
+  --success-soft: #102b27;
+  --danger: #ff8585;
+  --danger-soft: #34171e;
+  --shadow-sm: 0 2px 4px rgb(0 0 0 / 24%), 0 12px 30px rgb(0 0 0 / 24%);
+  --shadow-lg: 0 30px 85px rgb(0 0 0 / 45%);
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 24px;
@@ -1869,6 +1870,442 @@ textarea:focus {
 .finish-confetti {
   color: var(--party-purple);
   animation: party-pop 1.8s ease-in-out infinite;
+}
+
+/* Esti klubhangulat: mĂ©ly alapok, neonfĂ©nyek Ă©s sĂ¶tĂ©t ĂĽvegfelĂĽletek. */
+html {
+  background: #080612;
+}
+
+body {
+  background:
+    radial-gradient(circle at 10% 8%, rgb(168 85 247 / 22%), transparent 31rem),
+    radial-gradient(circle at 92% 16%, rgb(255 79 163 / 17%), transparent 28rem),
+    radial-gradient(circle at 72% 88%, rgb(34 211 238 / 12%), transparent 34rem),
+    linear-gradient(155deg, #080612 0%, #100820 42%, #090714 72%, #06050d 100%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: #7c2d9a;
+  color: #fff;
+}
+
+:focus-visible {
+  outline-color: #67e8f9;
+}
+
+* {
+  scrollbar-color: #5b3b77 #0e0a1a;
+}
+
+.site-shell::before,
+.game-shell::before,
+.unlock-page::before {
+  opacity: 0.92;
+  background-image:
+    radial-gradient(circle, rgb(255 209 102 / 82%) 0 2px, transparent 3px),
+    radial-gradient(circle, rgb(255 79 163 / 72%) 0 3px, transparent 4px),
+    radial-gradient(circle, rgb(34 211 238 / 65%) 0 2px, transparent 3px),
+    radial-gradient(circle, rgb(168 85 247 / 72%) 0 2px, transparent 3px),
+    radial-gradient(circle at 50% 50%, rgb(255 255 255 / 16%) 0 1px, transparent 1.5px);
+  background-position: 7% 17%, 92% 24%, 78% 84%, 21% 73%, 0 0;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+  background-size: auto, auto, auto, auto, 76px 76px;
+  filter: drop-shadow(0 0 8px rgb(255 79 163 / 42%));
+}
+
+.site-shell::after,
+.game-shell::after,
+.unlock-page::after {
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 0 49.8%, rgb(168 85 247 / 4%) 50%, transparent 50.2%),
+    linear-gradient(0deg, transparent 0 49.8%, rgb(34 211 238 / 3%) 50%, transparent 50.2%);
+  background-size: 96px 96px;
+  content: "";
+  mask-image: linear-gradient(to bottom, rgb(0 0 0 / 42%), transparent 82%);
+}
+
+.topbar,
+.game-topbar,
+.unlock-header {
+  border-color: rgb(119 91 151 / 34%);
+}
+
+.brand {
+  color: #fff;
+  text-shadow: 0 0 24px rgb(255 255 255 / 12%);
+}
+
+.brand-mark,
+.unlock-symbol,
+.privacy-symbol {
+  background: linear-gradient(145deg, #7c3aed, #d72d87 52%, #d84d23);
+  box-shadow:
+    0 0 18px rgb(168 85 247 / 42%),
+    0 0 42px rgb(255 79 163 / 18%);
+  animation: neon-breathe 4.8s ease-in-out infinite;
+}
+
+.privacy-chip,
+.host-badge {
+  border-color: rgb(168 85 247 / 42%);
+  background: rgb(18 13 36 / 78%);
+  color: #ddd3eb;
+  box-shadow: 0 10px 32px rgb(0 0 0 / 26%), inset 0 1px rgb(255 255 255 / 5%);
+}
+
+.hero::before {
+  background: radial-gradient(circle at 35% 30%, rgb(255 209 102 / 40%), rgb(255 79 163 / 17%) 42%, transparent 70%);
+  filter: blur(11px);
+  animation: night-float 9s ease-in-out infinite alternate;
+}
+
+.hero::after {
+  border-color: rgb(34 211 238 / 24%);
+  box-shadow: 0 0 42px rgb(34 211 238 / 14%), inset 0 0 30px rgb(168 85 247 / 10%);
+  animation: night-float 11s 1s ease-in-out infinite alternate-reverse;
+}
+
+.hero h1 {
+  background: linear-gradient(105deg, #ffffff 3%, #f0d8ff 30%, #ff65b3 62%, #ff9a64 82%, #67e8f9 112%);
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 10px 32px rgb(129 40 165 / 20%));
+  -webkit-background-clip: text;
+}
+
+.hero-lead,
+.trust-row,
+.step-card p,
+.unlock-lead,
+.unlock-privacy,
+.submission-lead,
+.panel-lead,
+.waiting-card p,
+.progress-row,
+.waiting-for-host,
+.guess-prompt,
+.danger-zone p,
+.footer {
+  color: var(--muted);
+}
+
+.trust-row span {
+  border-color: rgb(168 85 247 / 30%);
+  background: rgb(22 15 42 / 76%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 22%), inset 0 1px rgb(255 255 255 / 4%);
+}
+
+.trust-row span::before {
+  box-shadow: 0 0 10px currentColor;
+}
+
+.create-card,
+.unlock-card,
+.submission-card,
+.host-panel {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(145deg, rgb(24 18 43 / 97%), rgb(14 10 28 / 96%)) padding-box,
+    linear-gradient(135deg, rgb(255 120 73 / 68%), rgb(168 85 247 / 70%), rgb(34 211 238 / 46%)) border-box;
+  box-shadow:
+    0 28px 80px rgb(0 0 0 / 42%),
+    0 0 46px rgb(129 48 169 / 10%),
+    inset 0 1px rgb(255 255 255 / 5%);
+  backdrop-filter: blur(18px);
+}
+
+.create-card::before {
+  background: conic-gradient(from 40deg, rgb(255 120 73 / 26%), rgb(168 85 247 / 24%), rgb(34 211 238 / 18%), rgb(255 79 163 / 24%), rgb(255 120 73 / 26%));
+  filter: blur(2px);
+}
+
+.form-time,
+.participant-index,
+.card-quote,
+.waiting-count,
+.finish-confetti {
+  background: linear-gradient(145deg, #2b1740, #18213b);
+  color: #efd9ff;
+}
+
+.form-error {
+  border-color: #7e3948;
+  background: #32151d;
+  color: #ffc7cd;
+}
+
+.form-error > span {
+  background: #6c2a39;
+  color: #fff;
+}
+
+input,
+select,
+textarea {
+  border-color: var(--line-strong);
+  background: #100c20;
+  color: #faf7ff;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%);
+}
+
+select option {
+  background: #151126;
+  color: #faf7ff;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9d91ae;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  caret-color: #faf7ff;
+  -webkit-text-fill-color: #faf7ff;
+  -webkit-box-shadow: 0 0 0 1000px #100c20 inset;
+  transition: background-color 9999s ease-out 0s;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: #8f74b3;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--party-pink);
+  box-shadow: 0 0 0 3px rgb(255 79 163 / 20%), 0 0 25px rgb(168 85 247 / 12%);
+}
+
+.icon-button:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: #ffb4b4;
+}
+
+.switch-card,
+.switch-card-flat {
+  border-color: rgb(114 87 146 / 46%);
+  background: linear-gradient(135deg, rgb(44 22 58 / 78%), rgb(18 25 48 / 78%));
+}
+
+.switch-control > span {
+  border-color: #665778;
+  background: #3b3249;
+}
+
+.switch-control input:checked + span {
+  border-color: #c469ff;
+  background: linear-gradient(90deg, #7c3aed, #d72d87);
+  box-shadow: 0 0 18px rgb(168 85 247 / 30%);
+}
+
+.button-primary {
+  background: linear-gradient(110deg, #6328c9, #9d1759 55%, #a83516);
+  color: #fff;
+  box-shadow: 0 13px 32px rgb(103 35 190 / 32%), 0 0 24px rgb(255 79 163 / 12%);
+}
+
+.button-primary:hover:not(:disabled) {
+  background: linear-gradient(110deg, #5420ad, #86144d 55%, #8c2d13);
+  box-shadow: 0 17px 38px rgb(103 35 190 / 40%), 0 0 32px rgb(255 79 163 / 16%);
+}
+
+.button-secondary {
+  border-color: #625178;
+  background: #19142b;
+  color: #f8f4ff;
+}
+
+.button-secondary:hover:not(:disabled) {
+  border-color: #9879bd;
+  background: #271d3d;
+}
+
+.button-quiet:hover:not(:disabled),
+.input-action:hover {
+  background: #251b3a;
+  color: #fff;
+}
+
+.how-it-works,
+.footer,
+.game-topbar {
+  border-color: rgb(93 70 121 / 48%);
+}
+
+.step-card {
+  border-color: rgb(145 93 190 / 34%);
+  background: linear-gradient(145deg, rgb(24 18 43 / 84%), rgb(13 11 28 / 74%));
+  box-shadow: 0 18px 44px rgb(0 0 0 / 30%), inset 0 1px rgb(255 255 255 / 4%);
+}
+
+.step-number {
+  background: #2b1740;
+  color: #f2c6ff;
+  box-shadow: 0 0 18px rgb(168 85 247 / 14%);
+}
+
+.privacy-note {
+  border: 1px solid rgb(168 85 247 / 38%);
+  background:
+    radial-gradient(circle at 90% 20%, rgb(34 211 238 / 9%), transparent 17rem),
+    linear-gradient(135deg, rgb(27 18 48 / 94%), rgb(12 11 28 / 96%));
+  color: var(--ink);
+  box-shadow: 0 24px 62px rgb(0 0 0 / 32%), inset 0 1px rgb(255 255 255 / 4%);
+}
+
+.privacy-note p {
+  color: var(--muted);
+}
+
+.status-pill {
+  border-color: #53436a;
+  background: rgb(21 17 38 / 92%);
+  color: #d4cade;
+}
+
+.status-live {
+  border-color: #8c376a;
+  background: #2f1028;
+  color: #ffc5e4;
+  box-shadow: 0 0 0 5px rgb(255 79 163 / 8%), 0 0 24px rgb(255 79 163 / 10%);
+}
+
+.status-done {
+  border-color: #2b705d;
+  background: #0e2b24;
+  color: #9bf4d4;
+}
+
+.connection-note {
+  border-color: #75642d;
+  background: #2c240d;
+  color: #ffe39b;
+}
+
+.loader {
+  border-color: #3c3155;
+  border-top-color: var(--party-cyan);
+}
+
+.state-symbol {
+  background: var(--danger-soft);
+  color: #ffb6b6;
+}
+
+.copy-status {
+  color: #8ff0cb;
+}
+
+.waiting-card,
+.host-only-note {
+  border-color: var(--line);
+  background: rgb(20 15 36 / 82%);
+}
+
+.host-only-note > span {
+  background: #2b2240;
+  color: #fff;
+}
+
+.success-card {
+  border: 1px solid rgb(168 85 247 / 38%);
+  background:
+    radial-gradient(circle at 14% 18%, rgb(255 209 102 / 28%) 0 5px, transparent 6px),
+    radial-gradient(circle at 87% 23%, rgb(255 79 163 / 25%) 0 6px, transparent 7px),
+    radial-gradient(circle at 82% 82%, rgb(34 211 238 / 21%) 0 5px, transparent 6px),
+    linear-gradient(145deg, #1c1331, #0d0b1c);
+  box-shadow: 0 32px 82px rgb(0 0 0 / 46%), 0 0 44px rgb(168 85 247 / 10%);
+}
+
+.success-mark {
+  background: #10342b;
+  color: #8ff0cb;
+}
+
+.progress-track {
+  background: #21182f;
+}
+
+.progress-track span {
+  background: linear-gradient(90deg, #8b5cf6, #ff4fa3, #ff7849, #22d3ee);
+  box-shadow: 0 0 16px rgb(255 79 163 / 30%);
+}
+
+.reveal-card {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(145deg, rgb(24 18 43 / 98%), rgb(12 10 27 / 98%)) padding-box,
+    linear-gradient(120deg, #a855f7, #ff4fa3, #ff7849, #22d3ee) border-box;
+  box-shadow: 0 34px 90px rgb(0 0 0 / 50%), 0 0 55px rgb(137 54 190 / 14%);
+}
+
+.reveal-card::after {
+  background: radial-gradient(circle, rgb(255 79 163 / 24%), rgb(168 85 247 / 10%) 55%, transparent 70%);
+  filter: blur(4px);
+}
+
+.large-quote,
+.card-quote {
+  color: #d8a4ff;
+  text-shadow: 0 0 20px rgb(168 85 247 / 32%);
+}
+
+.target-reveal {
+  border-color: rgb(255 79 163 / 52%);
+  background: linear-gradient(120deg, #32132e, #24153e, #2b1821);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 26%), 0 0 24px rgb(255 79 163 / 10%);
+}
+
+.target-reveal span {
+  color: #f6b4dc;
+}
+
+.target-reveal strong {
+  color: #ead7ff;
+}
+
+.share-link-input {
+  background: #100c20;
+  color: #bcb1ca;
+}
+
+.target-list span {
+  border-color: #514166;
+  background: #19142b;
+  color: #d1c7dc;
+}
+
+.danger-zone {
+  border-color: #493649;
+}
+
+.delete-confirm > span,
+.danger-trigger {
+  color: #ff9f9f;
+}
+
+@keyframes neon-breathe {
+  0%, 100% {
+    box-shadow: 0 0 16px rgb(168 85 247 / 36%), 0 0 38px rgb(255 79 163 / 14%);
+  }
+  50% {
+    box-shadow: 0 0 24px rgb(168 85 247 / 50%), 0 0 54px rgb(255 79 163 / 22%);
+  }
+}
+
+@keyframes night-float {
+  from { transform: translate3d(0, -4px, 0) rotate(12deg); }
+  to { transform: translate3d(16px, 10px, 0) rotate(22deg); }
 }
 
 @keyframes party-pop {
