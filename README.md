@@ -29,7 +29,7 @@ A megosztott alkalmazásjelszó ellenőrzője, a munkamenet aláírókulcsa és 
 
 ## Helyi fejlesztés
 
-Követelmény: Node.js 22.13+ és pnpm.
+Követelmény: Node.js 22.18+ és pnpm.
 
 ```bash
 pnpm install
