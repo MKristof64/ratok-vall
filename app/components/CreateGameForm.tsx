@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { isAuthState, type AuthState } from "./account-types";
 import type { CreateRoomResponse } from "./game-types";
 import { getApiError } from "./game-types";
 
@@ -12,6 +13,41 @@ export function CreateGameForm() {
   const [revealTargetNames, setRevealTargetNames] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [auth, setAuth] = useState<AuthState | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const loadAuth = useCallback(async () => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const response = await fetch("/api/auth/me", {
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      if (response.status === 401) {
+        window.location.replace("/unlock?returnTo=%2F");
+        return;
+      }
+      if (!response.ok) throw new Error(await getApiError(response));
+      const payload = (await response.json()) as unknown;
+      if (!isAuthState(payload)) throw new Error("A fiókállapot nem olvasható.");
+      setAuth(payload);
+    } catch (requestError) {
+      setAuthError(
+        requestError instanceof Error
+          ? requestError.message
+          : "A fiókállapot most nem tölthető be.",
+      );
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAuth();
+  }, [loadAuth]);
 
   const updateParticipant = (index: number, value: string) => {
     setParticipants((current) =>
@@ -68,13 +104,18 @@ export function CreateGameForm() {
         return;
       }
 
+      if (response.status === 403) {
+        setAuth({ authenticated: true, kind: "guest", account: null });
+        throw new Error("Új játék indításához jelentkezz be egy saját fiókkal.");
+      }
+
       if (!response.ok) throw new Error(await getApiError(response));
       const payload = (await response.json()) as CreateRoomResponse;
       const code = payload.code || payload.room.code;
-      if (!code || !payload.hostToken) throw new Error("A játék nem jött létre megfelelően.");
+      if (!code) throw new Error("A játék nem jött létre megfelelően.");
 
       window.location.assign(
-        `/host/${encodeURIComponent(code)}#host=${encodeURIComponent(payload.hostToken)}`,
+        `/host/${encodeURIComponent(code)}${payload.hostToken ? `#host=${encodeURIComponent(payload.hostToken)}` : ""}`,
       );
     } catch (requestError) {
       setError(
@@ -86,6 +127,45 @@ export function CreateGameForm() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <section className="create-card auth-guard-card" aria-busy="true">
+        <span className="loader" aria-hidden="true" />
+        <p>A fiókod ellenőrzése…</p>
+      </section>
+    );
+  }
+
+  if (authError || !auth) {
+    return (
+      <section className="create-card auth-guard-card" role="alert">
+        <div className="auth-guard-symbol" aria-hidden="true">!</div>
+        <p className="eyebrow">Kapcsolódási hiba</p>
+        <h2>A fiókállapot most nem tölthető be.</h2>
+        <p>{authError || "Próbáld újra egy pillanat múlva."}</p>
+        <button className="button button-secondary" onClick={() => void loadAuth()} type="button">Újrapróbálom</button>
+      </section>
+    );
+  }
+
+  if (auth.kind === "guest") {
+    return (
+      <section className="create-card auth-guard-card" aria-labelledby="account-needed-title">
+        <div className="auth-guard-symbol auth-guard-account" aria-hidden="true">●</div>
+        <p className="eyebrow">Fiók szükséges</p>
+        <h2 id="account-needed-title">Játékot saját fiókkal indíthatsz.</h2>
+        <p>
+          A fiók csak a saját játékaid kezelésére szolgál. A meghívottak továbbra is
+          fiók nélkül, névtelenül küldhetnek be mondatokat.
+        </p>
+        <a className="button button-primary button-full" href="/account">
+          Fiók létrehozása vagy belépés <span aria-hidden="true">→</span>
+        </a>
+        <p className="form-footnote">Már beléptél a közös jelszóval, ezért regisztrálhatsz.</p>
+      </section>
+    );
+  }
+
   return (
     <form className="create-card" onSubmit={submit} noValidate>
       <div className="form-heading">
@@ -94,6 +174,11 @@ export function CreateGameForm() {
           <h2>Állítsd össze a társaságot</h2>
         </div>
         <span className="form-time">kb. 1 perc</span>
+      </div>
+
+      <div className="form-account-status">
+        <span className="account-link-mark" aria-hidden="true" />
+        <span>Belépve: <strong>{auth.account.email}</strong></span>
       </div>
 
       {error ? (
@@ -181,7 +266,7 @@ export function CreateGameForm() {
         {submitting ? "Létrehozás…" : "Játék létrehozása"}
         {!submitting ? <span aria-hidden="true">→</span> : null}
       </button>
-      <p className="form-footnote">A beküldőknek nem kell fiókot létrehozniuk.</p>
+      <p className="form-footnote">A beküldőknek nem kell fiókot létrehozniuk, a mondataik névtelenek maradnak.</p>
     </form>
   );
 }

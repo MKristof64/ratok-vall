@@ -1,11 +1,14 @@
 import { getD1 } from "@/db";
 import { randomToken, sha256Hex } from "@/lib/room-crypto";
+import {
+  decryptRoomShareCode,
+  encryptRoomShareCode,
+} from "@/lib/room-data-crypto";
 import { ensureRoomSchema } from "@/lib/room-db";
 import {
   type CreateRoomInput,
   RoomRequestError,
   type SettingsInput,
-  requireHostToken,
   requireRoomCode,
 } from "@/lib/room-validation";
 
@@ -21,6 +24,11 @@ interface RoomRow {
   current_card_index: number;
   current_target_revealed: number;
   version: number;
+  owner_account_id: string | null;
+}
+
+interface HostAccessRow extends RoomRow {
+  token_matches: number;
 }
 
 interface ParticipantRow {
@@ -37,6 +45,17 @@ interface CurrentCardRow {
   body: string;
   target_participant_id: string;
   target_name: string;
+}
+
+interface OwnedRoomRow {
+  id: string;
+  title: string;
+  status: RoomStatus;
+  reveal_target_names: number;
+  share_code_ciphertext: string | null;
+  updated_at: string;
+  participant_count: number;
+  submission_count: number;
 }
 
 export interface PublicRoomState {
@@ -70,7 +89,7 @@ async function findRoomByCode(code: string) {
   const room = await d1
     .prepare(
       `SELECT id, title, status, reveal_target_names, current_card_index,
-              current_target_revealed, version
+              current_target_revealed, version, owner_account_id
        FROM rooms
        WHERE share_code_hash = ?
        LIMIT 1`,
@@ -83,31 +102,59 @@ async function findRoomByCode(code: string) {
   return room;
 }
 
-async function authorizeHost(code: string, rawHostToken: string | null) {
+async function findHostAccess(
+  code: string,
+  rawHostToken: string | null,
+  accountId: string | null,
+) {
   await ensureRoomSchema();
   const d1 = getD1();
-  const [shareCodeHash, hostTokenHash] = await Promise.all([
-    roomHash(code),
-    sha256Hex(requireHostToken(rawHostToken)),
-  ]);
+  const shareCodeHash = await roomHash(code);
+  const hostTokenHash =
+    rawHostToken && /^[A-Za-z0-9_-]{43}$/.test(rawHostToken)
+      ? await sha256Hex(rawHostToken)
+      : null;
   const room = await d1
     .prepare(
       `SELECT id, title, status, reveal_target_names, current_card_index,
-              current_target_revealed, version
+              current_target_revealed, version, owner_account_id,
+              CASE
+                WHEN ? IS NOT NULL AND host_token_hash = ? THEN 1
+                ELSE 0
+              END AS token_matches
        FROM rooms
-       WHERE share_code_hash = ? AND host_token_hash = ?
+       WHERE share_code_hash = ?
        LIMIT 1`,
     )
-    .bind(shareCodeHash, hostTokenHash)
-    .first<RoomRow>();
+    .bind(hostTokenHash, hostTokenHash, shareCodeHash)
+    .first<HostAccessRow>();
   if (!room) {
+    throw new RoomRequestError(404, "room_not_found", "A szoba nem található.");
+  }
+
+  const via =
+    accountId && room.owner_account_id === accountId
+      ? ("account" as const)
+      : room.token_matches === 1
+        ? ("token" as const)
+        : null;
+  return { room, via };
+}
+
+async function authorizeHost(
+  code: string,
+  rawHostToken: string | null,
+  accountId: string | null,
+) {
+  const access = await findHostAccess(code, rawHostToken, accountId);
+  if (!access.via) {
     throw new RoomRequestError(
       403,
       "host_unauthorized",
       "Érvénytelen házigazda-jogosultság.",
     );
   }
-  return room;
+  return access.room;
 }
 
 async function submissionCount(roomId: string) {
@@ -185,30 +232,44 @@ export async function getPublicRoom(code: string): Promise<PublicRoomState> {
   };
 }
 
-export async function createRoom(input: CreateRoomInput) {
+export async function createRoom(
+  input: CreateRoomInput,
+  ownerAccountId: string | null,
+) {
+  if (!ownerAccountId) {
+    throw new RoomRequestError(
+      403,
+      "account_required",
+      "Új játék létrehozásához bejelentkezett fiók szükséges.",
+    );
+  }
   await ensureRoomSchema();
   const d1 = getD1();
   const id = crypto.randomUUID();
   const code = randomToken(32);
   const hostToken = randomToken(32);
-  const [shareCodeHash, hostTokenHash] = await Promise.all([
+  const [shareCodeHash, hostTokenHash, shareCodeCiphertext] = await Promise.all([
     sha256Hex(code),
     sha256Hex(hostToken),
+    encryptRoomShareCode(code, id),
   ]);
 
   const statements = [
     d1
       .prepare(
         `INSERT INTO rooms (
-           id, share_code_hash, host_token_hash, title, status,
+           id, share_code_hash, share_code_ciphertext, host_token_hash,
+           owner_account_id, title, status,
            reveal_target_names, current_card_index,
            current_target_revealed, version
-         ) VALUES (?, ?, ?, ?, 'collecting', ?, -1, 0, 1)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, 'collecting', ?, -1, 0, 1)`,
       )
       .bind(
         id,
         shareCodeHash,
+        shareCodeCiphertext,
         hostTokenHash,
+        ownerAccountId,
         input.title,
         input.revealTargetNames ? 1 : 0,
       ),
@@ -366,9 +427,10 @@ export async function addSubmission(
 export async function updateRoomSettings(
   code: string,
   rawHostToken: string | null,
+  accountId: string | null,
   input: SettingsInput,
 ) {
-  const room = await authorizeHost(code, rawHostToken);
+  const room = await authorizeHost(code, rawHostToken, accountId);
   if (room.status !== "collecting") {
     throw new RoomRequestError(
       409,
@@ -405,8 +467,12 @@ export async function updateRoomSettings(
   return getPublicRoom(code);
 }
 
-export async function startRoom(code: string, rawHostToken: string | null) {
-  const room = await authorizeHost(code, rawHostToken);
+export async function startRoom(
+  code: string,
+  rawHostToken: string | null,
+  accountId: string | null,
+) {
+  const room = await authorizeHost(code, rawHostToken, accountId);
   if (room.status !== "collecting") {
     throw new RoomRequestError(409, "already_started", "A játék már elindult.");
   }
@@ -441,8 +507,9 @@ export async function startRoom(code: string, rawHostToken: string | null) {
 export async function revealCurrentTarget(
   code: string,
   rawHostToken: string | null,
+  accountId: string | null,
 ) {
-  const room = await authorizeHost(code, rawHostToken);
+  const room = await authorizeHost(code, rawHostToken, accountId);
   if (room.status !== "playing") {
     throw new RoomRequestError(
       409,
@@ -472,8 +539,12 @@ export async function revealCurrentTarget(
   return getPublicRoom(code);
 }
 
-export async function nextCard(code: string, rawHostToken: string | null) {
-  const room = await authorizeHost(code, rawHostToken);
+export async function nextCard(
+  code: string,
+  rawHostToken: string | null,
+  accountId: string | null,
+) {
+  const room = await authorizeHost(code, rawHostToken, accountId);
   if (room.status !== "playing") {
     throw new RoomRequestError(
       409,
@@ -517,8 +588,12 @@ export async function nextCard(code: string, rawHostToken: string | null) {
   return getPublicRoom(code);
 }
 
-export async function finishRoom(code: string, rawHostToken: string | null) {
-  const room = await authorizeHost(code, rawHostToken);
+export async function finishRoom(
+  code: string,
+  rawHostToken: string | null,
+  accountId: string | null,
+) {
+  const room = await authorizeHost(code, rawHostToken, accountId);
   if (room.status !== "playing") {
     throw new RoomRequestError(
       409,
@@ -546,10 +621,80 @@ export async function finishRoom(code: string, rawHostToken: string | null) {
   return getPublicRoom(code);
 }
 
-export async function deleteRoom(code: string, rawHostToken: string | null) {
-  const room = await authorizeHost(code, rawHostToken);
+export async function deleteRoom(
+  code: string,
+  rawHostToken: string | null,
+  accountId: string | null,
+) {
+  const room = await authorizeHost(code, rawHostToken, accountId);
   await getD1()
     .prepare("DELETE FROM rooms WHERE id = ?")
     .bind(room.id)
     .run();
+}
+
+export async function getRoomHostAccess(
+  code: string,
+  rawHostToken: string | null,
+  accountId: string | null,
+) {
+  const access = await findHostAccess(code, rawHostToken, accountId);
+  return {
+    hasHostAccess: access.via !== null,
+    via: access.via,
+  };
+}
+
+export async function listOwnedRooms(accountId: string | null) {
+  if (!accountId) {
+    throw new RoomRequestError(
+      403,
+      "account_required",
+      "A saját játékok megtekintéséhez bejelentkezett fiók szükséges.",
+    );
+  }
+  await ensureRoomSchema();
+  const result = await getD1()
+    .prepare(
+      `SELECT r.id, r.title, r.status, r.reveal_target_names,
+              r.share_code_ciphertext, r.updated_at,
+              (SELECT COUNT(*) FROM participants AS p WHERE p.room_id = r.id)
+                AS participant_count,
+              (SELECT COUNT(*) FROM submissions AS s WHERE s.room_id = r.id)
+                AS submission_count
+       FROM rooms AS r
+       WHERE r.owner_account_id = ?
+       ORDER BY r.updated_at DESC, r.id DESC
+       LIMIT 100`,
+    )
+    .bind(accountId)
+    .all<OwnedRoomRow>();
+
+  return Promise.all(
+    result.results.map(async (room: OwnedRoomRow) => {
+      if (!room.share_code_ciphertext) {
+        throw new RoomRequestError(
+          500,
+          "room_data_unreadable",
+          "Az egyik játék meghívókódja nem olvasható.",
+        );
+      }
+      const code = await decryptRoomShareCode(
+        room.share_code_ciphertext,
+        room.id,
+      );
+      const encodedCode = encodeURIComponent(code);
+      return {
+        title: room.title,
+        status: room.status,
+        revealTargetNames: room.reveal_target_names === 1,
+        participantCount: Number(room.participant_count),
+        submissionCount: Number(room.submission_count),
+        updatedAt: room.updated_at,
+        code,
+        inviteUrlPath: `/room/${encodedCode}`,
+        hostUrlPath: `/host/${encodedCode}`,
+      };
+    }),
+  );
 }

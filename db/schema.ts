@@ -8,12 +8,28 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+export const accounts = sqliteTable(
+  "accounts",
+  {
+    id: text("id").primaryKey(),
+    email: text("email").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    passwordSalt: text("password_salt").notNull(),
+    passwordIterations: integer("password_iterations").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [uniqueIndex("idx_accounts_email").on(table.email)],
+);
+
 export const rooms = sqliteTable(
   "rooms",
   {
     id: text("id").primaryKey(),
     shareCodeHash: text("share_code_hash").notNull(),
+    shareCodeCiphertext: text("share_code_ciphertext"),
     hostTokenHash: text("host_token_hash").notNull(),
+    ownerAccountId: text("owner_account_id"),
     title: text("title").notNull().default(""),
     status: text("status").notNull().default("collecting"),
     revealTargetNames: integer("reveal_target_names", { mode: "boolean" })
@@ -31,6 +47,10 @@ export const rooms = sqliteTable(
   },
   (table) => [
     uniqueIndex("idx_rooms_share_code_hash").on(table.shareCodeHash),
+    index("idx_rooms_owner_updated_at").on(
+      table.ownerAccountId,
+      table.updatedAt,
+    ),
     check(
       "rooms_status_check",
       sql`${table.status} IN ('collecting', 'playing', 'finished')`,

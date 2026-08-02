@@ -1,9 +1,10 @@
 /** Cloudflare Worker entry point for Rátok vall. */
 import handler from "vinext/server/app-router-entry";
 import {
+  type AuthDatabase,
   type AuthEnv,
+  getValidSession,
   handleAuthRoute,
-  hasValidSession,
   isApiPath,
   isPublicVinextAsset,
   secureApplicationResponse,
@@ -13,13 +14,30 @@ import {
 } from "./auth";
 
 interface Env extends AuthEnv {
-  ASSETS: Fetcher;
-  DB: D1Database;
+  ASSETS: { fetch(request: Request): Promise<Response> };
+  DB: AuthDatabase;
 }
 
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void;
   passThroughOnException(): void;
+}
+
+const ACCOUNT_ID_HEADER = "x-ratok-account-id";
+
+function withoutUntrustedAccountHeader(request: Request): Request {
+  const headers = new Headers(request.headers);
+  headers.delete(ACCOUNT_ID_HEADER);
+  return new Request(request, { headers });
+}
+
+function withTrustedAccountHeader(
+  request: Request,
+  accountId: string,
+): Request {
+  const headers = new Headers(request.headers);
+  headers.set(ACCOUNT_ID_HEADER, accountId);
+  return new Request(request, { headers });
 }
 
 function isSameOriginMutation(request: Request, url: URL): boolean {
@@ -48,30 +66,42 @@ function forbiddenMutationResponse(): Response {
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
+    const sanitizedRequest = withoutUntrustedAccountHeader(request);
+    const url = new URL(sanitizedRequest.url);
 
-    const authResponse = await handleAuthRoute(request, env);
+    const authResponse = await handleAuthRoute(sanitizedRequest, env);
     if (authResponse) return authResponse;
 
     if (isPublicVinextAsset(url.pathname)) {
-      return securePublicAssetResponse(await handler.fetch(request, env, ctx));
+      return securePublicAssetResponse(
+        await handler.fetch(sanitizedRequest, env, ctx),
+      );
     }
 
     if (url.pathname === "/unlock" || url.pathname === "/unlock/") {
-      return secureApplicationResponse(await handler.fetch(request, env, ctx));
+      return secureApplicationResponse(
+        await handler.fetch(sanitizedRequest, env, ctx),
+      );
     }
 
-    if (!(await hasValidSession(request, env))) {
+    const session = await getValidSession(sanitizedRequest, env);
+    if (!session) {
       return isApiPath(url.pathname)
         ? unauthorizedApiResponse()
         : unlockRedirect(url);
     }
 
-    if (isApiPath(url.pathname) && !isSameOriginMutation(request, url)) {
+    if (isApiPath(url.pathname) && !isSameOriginMutation(sanitizedRequest, url)) {
       return forbiddenMutationResponse();
     }
 
-    return secureApplicationResponse(await handler.fetch(request, env, ctx));
+    const handlerRequest =
+      session.kind === "account"
+        ? withTrustedAccountHeader(sanitizedRequest, session.accountId)
+        : sanitizedRequest;
+    return secureApplicationResponse(
+      await handler.fetch(handlerRequest, env, ctx),
+    );
   },
 };
 
