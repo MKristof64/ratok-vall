@@ -10,8 +10,9 @@
     "build": "vinext build",
     "start": "vinext start",
     "test": "vinext build && node --test tests/*.test.mjs",
-    "lint": "eslint app lib db worker vite.config.ts next.config.ts drizzle.config.ts --ignore-pattern dist --ignore-pattern .vinext",
-    "db:generate": "drizzle-kit generate"
+    "lint": "eslint app lib db worker infrastructure tests vite.config.ts next.config.ts drizzle.config.ts --ignore-pattern dist --ignore-pattern .vinext",
+    "db:generate": "drizzle-kit generate",
+    "deploy:alias": "wrangler pages deploy infrastructure/pages-alias --project-name ratokvall-jatek --branch main"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
