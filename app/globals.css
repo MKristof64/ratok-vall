@@ -2226,6 +2226,97 @@ textarea:focus {
   overflow-y: auto;
 }
 
+.host-progress-actions,
+.finished-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.game-finish-trigger {
+  min-height: 34px;
+  border-color: #71414b;
+  background: rgb(48 18 28 / 82%);
+  color: #ffb2ba;
+  font-size: 0.72rem;
+  padding: 5px 11px;
+}
+
+.game-finish-trigger:hover:not(:disabled) {
+  border-color: #a65464;
+  background: #421823;
+}
+
+.finish-dialog {
+  width: min(92vw, 460px);
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  border: 1px solid #744252;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 88% 10%, rgb(255 79 163 / 15%), transparent 11rem),
+    linear-gradient(145deg, #1b142c, #0d0b19);
+  color: var(--ink);
+  padding: 0;
+  box-shadow: 0 36px 110px rgb(0 0 0 / 72%), 0 0 42px rgb(255 79 163 / 12%);
+}
+
+.finish-dialog::backdrop {
+  background: rgb(4 3 10 / 78%);
+  backdrop-filter: blur(7px);
+}
+
+.finish-dialog-body {
+  padding: 28px 28px 22px;
+  text-align: left;
+}
+
+.finish-dialog-symbol {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 17px;
+  place-items: center;
+  border: 1px solid #8c4554;
+  border-radius: 14px;
+  background: #38151e;
+  color: #ffc1c7;
+  font-weight: 800;
+}
+
+.finish-dialog h2 {
+  margin-bottom: 11px;
+  font-size: clamp(1.45rem, 5vw, 2rem);
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+}
+
+.finish-dialog-body > p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.finish-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin: 0;
+  border-top: 1px solid #44334f;
+  background: rgb(9 7 18 / 48%);
+  padding: 17px 28px 22px;
+}
+
+.finished-actions {
+  flex-wrap: wrap;
+}
+
+.finished-actions .button {
+  min-width: 172px;
+}
+
 @media (max-height: 680px) {
   .game-shell-immersive .large-quote {
     top: 14px;
@@ -2248,6 +2339,31 @@ textarea:focus {
 
   .game-shell-immersive .button-large {
     min-height: 46px;
+  }
+}
+
+@media (max-width: 520px) {
+  .host-progress-actions {
+    gap: 7px;
+  }
+
+  .game-finish-trigger {
+    min-height: 32px;
+    padding-inline: 9px;
+  }
+
+  .finish-dialog-body {
+    padding: 24px 20px 19px;
+  }
+
+  .finish-dialog-actions {
+    flex-direction: column-reverse;
+    padding: 15px 20px 20px;
+  }
+
+  .finish-dialog-actions .button,
+  .finished-actions .button {
+    width: 100%;
   }
 }
 

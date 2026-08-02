@@ -8,6 +8,7 @@ const projectRoot = new URL("../", import.meta.url);
 const projectPath = fileURLToPath(projectRoot);
 const serverPort = 32117;
 const baseUrl = `http://127.0.0.1:${serverPort}`;
+const serverStartupTimeoutMs = 60_000;
 let serverProcess;
 let serverOutput = "";
 
@@ -30,7 +31,8 @@ before(async () => {
     serverOutput = `${serverOutput}${chunk}`.slice(-8_000);
   });
 
-  for (let attempt = 0; attempt < 80; attempt += 1) {
+  const startupDeadline = Date.now() + serverStartupTimeoutMs;
+  while (Date.now() < startupDeadline) {
     if (serverProcess.exitCode !== null) {
       throw new Error(`The test server exited early.\n${serverOutput}`);
     }
@@ -93,19 +95,21 @@ test("protects browser pages and APIs before a valid session", async () => {
   assert.match(apiResponse.headers.get("cache-control") ?? "", /no-store/i);
 });
 
-test("removes the starter preview and legacy provider auth surface", async () => {
-  const [page, layout, accountPage, packageJson] = await Promise.all([
+test("uses the account as home and keeps game creation on its own route", async () => {
+  const [page, newGamePage, layout, accountPage, packageJson] = await Promise.all([
     readFile(new URL("app/page.tsx", projectRoot), "utf8"),
+    readFile(new URL("app/new-game/page.tsx", projectRoot), "utf8"),
     readFile(new URL("app/layout.tsx", projectRoot), "utf8"),
     readFile(new URL("app/account/page.tsx", projectRoot), "utf8"),
     readFile(new URL("package.json", projectRoot), "utf8"),
   ]);
 
-  assert.match(page, /Rátok vall|Egy mondat/);
-  assert.match(page, /AccountLink/);
+  assert.match(page, /AccountClient/);
+  assert.match(newGamePage, /CreateGameForm/);
+  assert.match(newGamePage, /Egy mondat\. Egy ismerős\. Sok nevetés\./);
   assert.match(layout, /lang="hu"/);
   assert.match(accountPage, /AccountClient/);
-  assert.doesNotMatch(page, /_sites-preview|codex-preview/);
+  assert.doesNotMatch(newGamePage, /_sites-preview|codex-preview/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await assert.rejects(
     access(new URL("app/_sites-preview/SkeletonPreview.tsx", projectRoot)),
@@ -115,7 +119,7 @@ test("removes the starter preview and legacy provider auth surface", async () =>
 
 test("removes the two retired homepage sections and their styles", async () => {
   const [page, styles] = await Promise.all([
-    readFile(new URL("app/page.tsx", projectRoot), "utf8"),
+    readFile(new URL("app/new-game/page.tsx", projectRoot), "utf8"),
     readFile(new URL("app/globals.css", projectRoot), "utf8"),
   ]);
 
@@ -150,4 +154,60 @@ test("keeps target choices random and the started game screen distraction free",
   assert.match(styles, /\.game-shell-immersive\s*\{[^}]*height: 100dvh;/s);
   assert.match(styles, /grid-template-rows: auto auto minmax\(0, 1fr\)/);
   assert.match(styles, /\.game-shell-immersive \.reveal-card,[\s\S]*?min-height: 0;/);
+});
+
+test("confirms finishing, supports replay, and keeps account-first navigation", async () => {
+  const [
+    hostRoom,
+    account,
+    createGame,
+    chrome,
+    roomService,
+    restartRoute,
+    polling,
+    styles,
+  ] =
+    await Promise.all([
+      readFile(new URL("app/components/HostRoom.tsx", projectRoot), "utf8"),
+      readFile(new URL("app/components/AccountClient.tsx", projectRoot), "utf8"),
+      readFile(new URL("app/components/CreateGameForm.tsx", projectRoot), "utf8"),
+      readFile(new URL("app/components/AppChrome.tsx", projectRoot), "utf8"),
+      readFile(new URL("lib/room-service.ts", projectRoot), "utf8"),
+      readFile(new URL("app/api/rooms/[code]/restart/route.ts", projectRoot), "utf8"),
+      readFile(new URL("app/components/useRoomPolling.ts", projectRoot), "utf8"),
+      readFile(new URL("app/globals.css", projectRoot), "utf8"),
+    ]);
+
+  assert.match(hostRoom, /aria-haspopup="dialog"/);
+  assert.match(hostRoom, /<dialog[\s\S]*id="finish-game-dialog"/);
+  assert.match(hostRoom, /Biztosan befejezed a játékot\?/);
+  assert.match(hostRoom, /Igen, befejezem/);
+  assert.match(hostRoom, /runAndUpdate\("finish", "\/finish"\)/);
+  assert.match(hostRoom, /runAndUpdate\("restart", "\/restart"\)/);
+  assert.match(hostRoom, /finishedTitleRef\.current\?\.focus\(\)/);
+  assert.match(hostRoom, /Játék újrajátszása/);
+
+  assert.match(roomService, /export async function restartRoom/);
+  assert.match(roomService, /room\.status !== "finished"/);
+  assert.match(roomService, /lower\(hex\(randomblob\(16\)\)\) \|\| ':' \|\| id/);
+  assert.match(roomService, /status = 'playing', current_card_index = 0/);
+  assert.match(roomService, /status = 'finished' AND version = \?/);
+  assert.match(roomService, /const submissionId = crypto\.randomUUID\(\)/);
+  assert.match(roomService, /d1\.batch\(/);
+  assert.match(roomService, /WHERE id = \? AND room_id = rooms\.id/);
+  assert.match(restartRoute, /trustedAccountIdFromRequest/);
+  assert.match(restartRoute, /restartRoom/);
+
+  assert.match(polling, /new AbortController\(\)/);
+  assert.match(polling, /requestGenerationRef/);
+  assert.match(polling, /visibilitychange/);
+
+  assert.match(account, /href="\/new-game"/);
+  assert.match(account, /returnTo="\/"/);
+  assert.doesNotMatch(account, /returnTo=%2Faccount/);
+  assert.match(createGame, /returnTo=%2Fnew-game/);
+  assert.match(chrome, /className=\{`account-link[\s\S]*?href="\/"/);
+
+  assert.match(styles, /\.finish-dialog::backdrop/);
+  assert.match(styles, /\.game-finish-trigger/);
 });

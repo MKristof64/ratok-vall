@@ -325,7 +325,7 @@ export function RoomGuest({ code }: { code: string }) {
             <p className="eyebrow">A kör véget ért</p>
             <h2 id="finished-title">Köszönjük a mondatokat!</h2>
             <p>{room.submissionCount} névtelen mondatból született közös játék.</p>
-            <a className="button button-primary" href="/">Új játék indítása</a>
+            <a className="button button-primary" href="/">Vissza a fiókomhoz</a>
           </section>
         ) : null}
       </div>

@@ -13,7 +13,14 @@ import {
 } from "./game-types";
 import { useRoomPolling } from "./useRoomPolling";
 
-type ActionName = "settings" | "start" | "reveal" | "next" | "finish" | "delete";
+type ActionName =
+  | "settings"
+  | "start"
+  | "reveal"
+  | "next"
+  | "finish"
+  | "restart"
+  | "delete";
 
 type HostAccessResponse = {
   hasHostAccess: boolean;
@@ -72,6 +79,8 @@ export function HostRoom({ code }: { code: string }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const cardTitleRef = useRef<HTMLHeadingElement>(null);
+  const finishedTitleRef = useRef<HTMLHeadingElement>(null);
+  const finishDialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -136,6 +145,10 @@ export function HostRoom({ code }: { code: string }) {
   useEffect(() => {
     if (shouldFocusCard) cardTitleRef.current?.focus();
   }, [cardKey, shouldFocusCard]);
+
+  useEffect(() => {
+    if (room?.status === "finished") finishedTitleRef.current?.focus();
+  }, [room?.status]);
 
   const hostFetch = async (
     path: string,
@@ -363,7 +376,19 @@ export function HostRoom({ code }: { code: string }) {
           <section className="host-play-stage">
             <div className="progress-row">
               <span>{currentPosition}. mondat</span>
-              <span>{total} összesen</span>
+              <div className="host-progress-actions">
+                <span>{total} összesen</span>
+                <button
+                  aria-controls="finish-game-dialog"
+                  aria-haspopup="dialog"
+                  className="button button-quiet game-finish-trigger"
+                  disabled={busy !== null}
+                  onClick={() => finishDialogRef.current?.showModal()}
+                  type="button"
+                >
+                  Befejezés
+                </button>
+              </div>
             </div>
             <div className="progress-track" aria-hidden="true">
               <span style={{ width: `${total ? (currentPosition / total) * 100 : 0}%` }} />
@@ -390,8 +415,8 @@ export function HostRoom({ code }: { code: string }) {
               </article>
             ) : <LoadingView label="A következő mondat betöltése…" />}
 
-            <div className="play-controls">
-              {room.revealTargetNames && room.currentCard && !room.currentCard.targetRevealed ? (
+            {room.revealTargetNames && room.currentCard && !room.currentCard.targetRevealed ? (
+              <div className="play-controls">
                 <button
                   className="button button-primary button-large"
                   disabled={busy !== null}
@@ -400,16 +425,9 @@ export function HostRoom({ code }: { code: string }) {
                 >
                   {busy === "reveal" ? "Felfedés…" : "Célpont felfedése"}
                 </button>
-              ) : lastCard ? (
-                <button
-                  className="button button-primary button-large"
-                  disabled={busy !== null}
-                  onClick={() => void runAndUpdate("finish", "/finish")}
-                  type="button"
-                >
-                  {busy === "finish" ? "Befejezés…" : "Játék befejezése"}
-                </button>
-              ) : (
+              </div>
+            ) : !lastCard ? (
+              <div className="play-controls">
                 <button
                   className="button button-primary button-large"
                   disabled={busy !== null || !room.currentCard}
@@ -419,8 +437,43 @@ export function HostRoom({ code }: { code: string }) {
                   {busy === "next" ? "Következő…" : "Következő mondat"}
                   {busy !== "next" ? <span aria-hidden="true">→</span> : null}
                 </button>
-              )}
-            </div>
+              </div>
+            ) : null}
+
+            <dialog
+              aria-describedby="finish-dialog-description"
+              aria-labelledby="finish-dialog-title"
+              aria-modal="true"
+              className="finish-dialog"
+              id="finish-game-dialog"
+              ref={finishDialogRef}
+            >
+              <div className="finish-dialog-body">
+                <span className="finish-dialog-symbol" aria-hidden="true">!</span>
+                <p className="eyebrow">Játék befejezése</p>
+                <h2 id="finish-dialog-title">Biztosan befejezed a játékot?</h2>
+                <p id="finish-dialog-description">
+                  A játékosok a befejezett képernyőre kerülnek. A játékot később
+                  ugyaninnen, az összes mondattal újraindíthatod.
+                </p>
+              </div>
+              <form className="finish-dialog-actions" method="dialog">
+                <button autoFocus className="button button-secondary" value="cancel">
+                  Mégsem
+                </button>
+                <button
+                  className="button button-danger"
+                  disabled={busy !== null}
+                  onClick={() => {
+                    finishDialogRef.current?.close();
+                    void runAndUpdate("finish", "/finish");
+                  }}
+                  type="button"
+                >
+                  Igen, befejezem
+                </button>
+              </form>
+            </dialog>
           </section>
         ) : null}
 
@@ -428,9 +481,24 @@ export function HostRoom({ code }: { code: string }) {
           <section className="success-card host-finished-card" aria-labelledby="host-finished-title">
             <div className="finish-confetti" aria-hidden="true">✦</div>
             <p className="eyebrow">Vége a körnek</p>
-            <h2 id="host-finished-title">Szép játék volt!</h2>
-            <p>{room.submissionCount} névtelen mondatot játszottatok végig.</p>
-            <a className="button button-primary" href="/">Új játék indítása</a>
+            <h2 id="host-finished-title" ref={finishedTitleRef} tabIndex={-1}>
+              Szép játék volt!
+            </h2>
+            <p>
+              {room.submissionCount} névtelen mondat vár egy újabb, frissen
+              megkevert körre.
+            </p>
+            <div className="finished-actions">
+              <button
+                className="button button-primary"
+                disabled={busy !== null}
+                onClick={() => void runAndUpdate("restart", "/restart")}
+                type="button"
+              >
+                {busy === "restart" ? "Újraindítás…" : "Játék újrajátszása"}
+              </button>
+              <a className="button button-secondary" href="/">Vissza a fiókomhoz</a>
+            </div>
           </section>
         ) : null}
 
