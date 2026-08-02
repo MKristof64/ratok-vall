@@ -2,6 +2,8 @@
 
 Letisztult, anonim társasági játék: hozz létre egy szobát, add meg a társaság tagjainak becenevét, majd oszd meg a meghívót. A résztvevők név és fiók nélkül írhatnak rövid mondatokat, és kiválaszthatják, kire gondoltak.
 
+Rövid, megosztható cím: **https://ratokvall-jatek.pages.dev**
+
 ## Mit tud?
 
 - fiók, e-mail és szerzőazonosító nélküli mondatbeküldés;
@@ -27,7 +29,7 @@ A megosztott alkalmazásjelszó ellenőrzője, a munkamenet aláírókulcsa és 
 
 ## Helyi fejlesztés
 
-Követelmény: Node.js 22.13+ és pnpm.
+Követelmény: Node.js 22.18+ és pnpm.
 
 ```bash
 pnpm install
@@ -53,6 +55,14 @@ Telepítéskor állítsd be titkos környezeti értékként:
 - `APP_PASSWORD_VERIFIER`
 - `APP_SESSION_SECRET`
 - `ROOM_DATA_ENCRYPTION_KEY` (pontosan 32 véletlen bájt standard base64 kódolással)
+- `ALIAS_PROXY_SECRET` (legalább 32 véletlen bájt; ugyanaz az érték kell a Sites originhez és a Pages átjáróhoz)
+
+A `ratokvall-jatek.pages.dev` címhez tartozó, CSRF-védett Cloudflare Pages átjáró az `infrastructure/pages-alias` könyvtárból telepíthető. Az átjáró nem tart fenn külön adatbázist: ugyanazt az élő játékot, fiókokat és mentett szobákat szolgálja ki a rövidebb címen. A kliens-IP-ből képzett, vissza nem fordítható rate-limit kulcsot az átjáró az `ALIAS_PROXY_SECRET` segítségével írja alá, az origin pedig csak érvényes aláírással fogadja el.
+
+```bash
+wrangler pages secret put ALIAS_PROXY_SECRET --project-name ratokvall-jatek
+pnpm run deploy:alias
+```
 
 ## Technológia
 

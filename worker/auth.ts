@@ -11,6 +11,7 @@ export interface AuthDatabase {
 export interface AuthEnv {
   APP_PASSWORD_VERIFIER?: string;
   APP_SESSION_SECRET?: string;
+  ALIAS_PROXY_SECRET?: string;
   DB?: AuthDatabase;
 }
 
@@ -70,6 +71,25 @@ type RateLimitEntry = {
   windowStartedAt: number;
 };
 
+type AliasRateLimitKeyResult =
+  | { kind: "absent" }
+  | { kind: "invalid" }
+  | { kind: "valid"; key: string };
+
+type AuthRateLimitResult =
+  | {
+      sourceAuthenticated: false;
+      allowed: false;
+      key: "";
+      retryAfterSeconds: 0;
+    }
+  | {
+      sourceAuthenticated: true;
+      allowed: boolean;
+      key: string;
+      retryAfterSeconds: number;
+    };
+
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -91,6 +111,9 @@ const MAX_REQUEST_BODY_BYTES = 4_096;
 const LOGIN_RATE_LIMIT = 6;
 const LOGIN_RATE_WINDOW_MS = 60_000;
 const MAX_RATE_LIMIT_ENTRIES = 2_048;
+const ALIAS_CLIENT_KEY_HEADER = "x-ratok-alias-client-key";
+const ALIAS_SIGNATURE_HEADER = "x-ratok-alias-signature";
+const ALIAS_KEY_LENGTH = 43;
 const rateLimitEntries = new Map<string, RateLimitEntry>();
 let rateLimitCalls = 0;
 
@@ -98,6 +121,8 @@ const accountSchemaPromises = new WeakMap<object, Promise<void>>();
 
 let cachedSessionSecret: string | undefined;
 let cachedSessionKey: Promise<CryptoKey> | undefined;
+let cachedAliasProxySecret: string | undefined;
+let cachedAliasProxyKey: Promise<CryptoKey> | undefined;
 
 export async function handleAuthRoute(
   request: Request,
@@ -291,7 +316,13 @@ async function handleUnlockRequest(
   // This limiter executes before reading the request body and before the
   // deliberately expensive PBKDF2 operation. Only a keyed digest of the
   // address is retained in this isolate for one short window.
-  const rateLimit = await takeAuthRateLimit(request, secret, "guest-unlock");
+  const rateLimit = await takeAuthRateLimit(
+    request,
+    secret,
+    env.ALIAS_PROXY_SECRET,
+    "guest-unlock",
+  );
+  if (!rateLimit.sourceAuthenticated) return authenticationUnavailableResponse();
   if (!rateLimit.allowed) {
     return rateLimitedResponse(request, rateLimit.retryAfterSeconds);
   }
@@ -345,7 +376,13 @@ async function handleRegisterRequest(
     );
   }
 
-  const rateLimit = await takeAuthRateLimit(request, secret, "account-register");
+  const rateLimit = await takeAuthRateLimit(
+    request,
+    secret,
+    env.ALIAS_PROXY_SECRET,
+    "account-register",
+  );
+  if (!rateLimit.sourceAuthenticated) return authenticationUnavailableResponse();
   if (!rateLimit.allowed) {
     return rateLimitedResponse(request, rateLimit.retryAfterSeconds);
   }
@@ -435,7 +472,13 @@ async function handleAccountLoginRequest(
   const secret = validSessionSecret(env.APP_SESSION_SECRET);
   if (!secret || !env.DB) return authenticationUnavailableResponse();
 
-  const rateLimit = await takeAuthRateLimit(request, secret, "account-login");
+  const rateLimit = await takeAuthRateLimit(
+    request,
+    secret,
+    env.ALIAS_PROXY_SECRET,
+    "account-login",
+  );
+  if (!rateLimit.sourceAuthenticated) return authenticationUnavailableResponse();
   if (!rateLimit.allowed) {
     return rateLimitedResponse(request, rateLimit.retryAfterSeconds);
   }
@@ -792,6 +835,20 @@ async function sessionKey(secret: string): Promise<CryptoKey> {
   return cachedSessionKey;
 }
 
+async function aliasProxyKey(secret: string): Promise<CryptoKey> {
+  if (cachedAliasProxySecret !== secret || !cachedAliasProxyKey) {
+    cachedAliasProxySecret = secret;
+    cachedAliasProxyKey = crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"],
+    );
+  }
+  return cachedAliasProxyKey;
+}
+
 async function createSessionCookie(
   secret: string,
   session: AuthSession,
@@ -839,9 +896,22 @@ function serializeSessionCookie(value: string, maxAge: number): string {
 async function takeAuthRateLimit(
   request: Request,
   secret: string,
+  aliasProxySecret: string | undefined,
   scope: "guest-unlock" | "account-register" | "account-login",
-): Promise<{ allowed: boolean; key: string; retryAfterSeconds: number }> {
-  const rawAddress = request.headers.get("CF-Connecting-IP") ?? "local-or-unknown";
+): Promise<AuthRateLimitResult> {
+  const aliasKey = await verifyAliasRateLimitKey(request, aliasProxySecret);
+  if (aliasKey.kind === "invalid") {
+    return {
+      sourceAuthenticated: false,
+      allowed: false,
+      key: "",
+      retryAfterSeconds: 0,
+    };
+  }
+  const rawAddress =
+    (aliasKey.kind === "valid" ? `alias:${aliasKey.key}` : null) ??
+    request.headers.get("CF-Connecting-IP") ??
+    "local-or-unknown";
   const digest = await crypto.subtle.sign(
     "HMAC",
     await sessionKey(secret),
@@ -869,10 +939,48 @@ async function takeAuthRateLimit(
     Math.ceil((entry.windowStartedAt + LOGIN_RATE_WINDOW_MS - now) / 1_000),
   );
   return {
+    sourceAuthenticated: true,
     allowed: entry.count <= LOGIN_RATE_LIMIT,
     key,
     retryAfterSeconds,
   };
+}
+
+export async function verifyAliasRateLimitKey(
+  request: Request,
+  secretValue: string | undefined,
+): Promise<AliasRateLimitKeyResult> {
+  const hasClientKey = request.headers.has(ALIAS_CLIENT_KEY_HEADER);
+  const hasSignature = request.headers.has(ALIAS_SIGNATURE_HEADER);
+  if (!hasClientKey && !hasSignature) return { kind: "absent" };
+  if (!hasClientKey || !hasSignature) return { kind: "invalid" };
+
+  const clientKey = request.headers.get(ALIAS_CLIENT_KEY_HEADER);
+  const encodedSignature = request.headers.get(ALIAS_SIGNATURE_HEADER);
+  const secret = validSessionSecret(secretValue);
+  if (
+    !secret ||
+    !clientKey ||
+    !encodedSignature ||
+    clientKey.length !== ALIAS_KEY_LENGTH ||
+    encodedSignature.length !== ALIAS_KEY_LENGTH ||
+    !/^[A-Za-z0-9_-]+$/.test(clientKey) ||
+    !/^[A-Za-z0-9_-]+$/.test(encodedSignature)
+  ) {
+    return { kind: "invalid" };
+  }
+
+  try {
+    const valid = await crypto.subtle.verify(
+      "HMAC",
+      await aliasProxyKey(secret),
+      exactArrayBuffer(decodeBase64Url(encodedSignature)),
+      encoder.encode(`ratok-alias-proof:v1:${clientKey}`),
+    );
+    return valid ? { kind: "valid", key: clientKey } : { kind: "invalid" };
+  } catch {
+    return { kind: "invalid" };
+  }
 }
 
 function pruneRateLimitEntries(now: number): void {
