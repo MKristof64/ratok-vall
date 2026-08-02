@@ -71,6 +71,25 @@ type RateLimitEntry = {
   windowStartedAt: number;
 };
 
+type AliasRateLimitKeyResult =
+  | { kind: "absent" }
+  | { kind: "invalid" }
+  | { kind: "valid"; key: string };
+
+type AuthRateLimitResult =
+  | {
+      sourceAuthenticated: false;
+      allowed: false;
+      key: "";
+      retryAfterSeconds: 0;
+    }
+  | {
+      sourceAuthenticated: true;
+      allowed: boolean;
+      key: string;
+      retryAfterSeconds: number;
+    };
+
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -303,6 +322,7 @@ async function handleUnlockRequest(
     env.ALIAS_PROXY_SECRET,
     "guest-unlock",
   );
+  if (!rateLimit.sourceAuthenticated) return authenticationUnavailableResponse();
   if (!rateLimit.allowed) {
     return rateLimitedResponse(request, rateLimit.retryAfterSeconds);
   }
@@ -362,6 +382,7 @@ async function handleRegisterRequest(
     env.ALIAS_PROXY_SECRET,
     "account-register",
   );
+  if (!rateLimit.sourceAuthenticated) return authenticationUnavailableResponse();
   if (!rateLimit.allowed) {
     return rateLimitedResponse(request, rateLimit.retryAfterSeconds);
   }
@@ -457,6 +478,7 @@ async function handleAccountLoginRequest(
     env.ALIAS_PROXY_SECRET,
     "account-login",
   );
+  if (!rateLimit.sourceAuthenticated) return authenticationUnavailableResponse();
   if (!rateLimit.allowed) {
     return rateLimitedResponse(request, rateLimit.retryAfterSeconds);
   }
@@ -876,10 +898,18 @@ async function takeAuthRateLimit(
   secret: string,
   aliasProxySecret: string | undefined,
   scope: "guest-unlock" | "account-register" | "account-login",
-): Promise<{ allowed: boolean; key: string; retryAfterSeconds: number }> {
-  const trustedAliasKey = await validAliasClientKey(request, aliasProxySecret);
+): Promise<AuthRateLimitResult> {
+  const aliasKey = await verifyAliasRateLimitKey(request, aliasProxySecret);
+  if (aliasKey.kind === "invalid") {
+    return {
+      sourceAuthenticated: false,
+      allowed: false,
+      key: "",
+      retryAfterSeconds: 0,
+    };
+  }
   const rawAddress =
-    trustedAliasKey ??
+    (aliasKey.kind === "valid" ? `alias:${aliasKey.key}` : null) ??
     request.headers.get("CF-Connecting-IP") ??
     "local-or-unknown";
   const digest = await crypto.subtle.sign(
@@ -909,19 +939,25 @@ async function takeAuthRateLimit(
     Math.ceil((entry.windowStartedAt + LOGIN_RATE_WINDOW_MS - now) / 1_000),
   );
   return {
+    sourceAuthenticated: true,
     allowed: entry.count <= LOGIN_RATE_LIMIT,
     key,
     retryAfterSeconds,
   };
 }
 
-async function validAliasClientKey(
+export async function verifyAliasRateLimitKey(
   request: Request,
   secretValue: string | undefined,
-): Promise<string | null> {
-  const secret = validSessionSecret(secretValue);
+): Promise<AliasRateLimitKeyResult> {
+  const hasClientKey = request.headers.has(ALIAS_CLIENT_KEY_HEADER);
+  const hasSignature = request.headers.has(ALIAS_SIGNATURE_HEADER);
+  if (!hasClientKey && !hasSignature) return { kind: "absent" };
+  if (!hasClientKey || !hasSignature) return { kind: "invalid" };
+
   const clientKey = request.headers.get(ALIAS_CLIENT_KEY_HEADER);
   const encodedSignature = request.headers.get(ALIAS_SIGNATURE_HEADER);
+  const secret = validSessionSecret(secretValue);
   if (
     !secret ||
     !clientKey ||
@@ -931,7 +967,7 @@ async function validAliasClientKey(
     !/^[A-Za-z0-9_-]+$/.test(clientKey) ||
     !/^[A-Za-z0-9_-]+$/.test(encodedSignature)
   ) {
-    return null;
+    return { kind: "invalid" };
   }
 
   try {
@@ -941,9 +977,9 @@ async function validAliasClientKey(
       exactArrayBuffer(decodeBase64Url(encodedSignature)),
       encoder.encode(`ratok-alias-proof:v1:${clientKey}`),
     );
-    return valid ? `alias:${clientKey}` : null;
+    return valid ? { kind: "valid", key: clientKey } : { kind: "invalid" };
   } catch {
-    return null;
+    return { kind: "invalid" };
   }
 }
 

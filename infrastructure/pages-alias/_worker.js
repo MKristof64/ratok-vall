@@ -3,6 +3,7 @@ const UPSTREAM_ORIGIN = "https://ratok-vall.kristof-madarasz159.chatgpt.site";
 const SESSION_COOKIE_NAME = "__Host-mondat_session";
 const ALIAS_CLIENT_KEY_HEADER = "x-ratok-alias-client-key";
 const ALIAS_SIGNATURE_HEADER = "x-ratok-alias-signature";
+const MAX_SESSION_COOKIE_LENGTH = 2_048;
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const RATE_LIMITED_AUTH_PATHS = new Set([
   "/api/auth/unlock",
@@ -83,7 +84,29 @@ function upstreamTarget(incomingUrl) {
   return targetUrl;
 }
 
+function stripHopByHopHeaders(headers) {
+  const connectionHeaders = (headers.get("Connection") ?? "")
+    .split(",")
+    .map((name) => name.trim().toLowerCase())
+    .filter(Boolean);
+  const hopByHopNames = new Set([
+    "connection",
+    "keep-alive",
+    "proxy-connection",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+    ...connectionHeaders,
+  ]);
+
+  for (const name of [...headers.keys()]) {
+    if (hopByHopNames.has(name.toLowerCase())) headers.delete(name);
+  }
+}
+
 function stripUntrustedProxyHeaders(headers) {
+  stripHopByHopHeaders(headers);
   const exactNames = new Set([
     "host",
     "forwarded",
@@ -110,7 +133,14 @@ function sessionCookieHeader(cookieHeader) {
     const separator = item.indexOf("=");
     if (separator < 0) continue;
     if (item.slice(0, separator).trim() === SESSION_COOKIE_NAME) {
-      return `${SESSION_COOKIE_NAME}=${item.slice(separator + 1).trim()}`;
+      const value = item.slice(separator + 1).trim();
+      if (
+        value.length > MAX_SESSION_COOKIE_LENGTH ||
+        !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value)
+      ) {
+        return null;
+      }
+      return `${SESSION_COOKIE_NAME}=${value}`;
     }
   }
   return null;
@@ -234,6 +264,7 @@ function allowedSessionSetCookie(cookie) {
 
 function responseHeaders(upstreamResponse, incomingUrl, targetUrl) {
   const headers = new Headers(upstreamResponse.headers);
+  stripHopByHopHeaders(headers);
   const sessionCookies = getSetCookies(upstreamResponse.headers).filter(
     allowedSessionSetCookie,
   );

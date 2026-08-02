@@ -34,7 +34,8 @@ test("the Pages alias safely forwards a same-origin mutation once", async () => 
       headers: {
         Authorization: "Bearer must-not-forward",
         Cookie:
-          "theme=night; __Host-mondat_session=signed-session; __cf_bm=discard-me",
+          "theme=night; __Host-mondat_session=signed.session; __cf_bm=discard-me",
+        Connection: "X-Remove-Me",
         "Content-Type": "application/json",
         Forwarded: "for=attacker.example",
         Origin: aliasOrigin,
@@ -45,6 +46,7 @@ test("the Pages alias safely forwards a same-origin mutation once", async () => 
         "X-Ratok-Alias-Client-Key": "spoofed-key",
         "X-Ratok-Alias-Signature": "spoofed-signature",
         "X-Real-IP": "203.0.113.11",
+        "X-Remove-Me": "connection-scoped",
       },
       body: JSON.stringify({ title: "Teszt" }),
     }),
@@ -64,6 +66,7 @@ test("the Pages alias safely forwards a same-origin mutation once", async () => 
   assert.equal(forwardedRequest.headers.get("Origin"), upstreamOrigin);
   assert.equal(forwardedRequest.headers.get("Sec-Fetch-Site"), "same-origin");
   assert.equal(forwardedRequest.headers.get("Authorization"), null);
+  assert.equal(forwardedRequest.headers.get("Connection"), null);
   assert.equal(forwardedRequest.headers.get("Forwarded"), null);
   assert.equal(forwardedRequest.headers.get("Proxy-Authorization"), null);
   assert.equal(forwardedRequest.headers.get("X-Forwarded-For"), null);
@@ -71,9 +74,10 @@ test("the Pages alias safely forwards a same-origin mutation once", async () => 
   assert.equal(forwardedRequest.headers.get("X-Ratok-Alias-Client-Key"), null);
   assert.equal(forwardedRequest.headers.get("X-Ratok-Alias-Signature"), null);
   assert.equal(forwardedRequest.headers.get("X-Real-IP"), null);
+  assert.equal(forwardedRequest.headers.get("X-Remove-Me"), null);
   assert.equal(
     forwardedRequest.headers.get("Cookie"),
-    "__Host-mondat_session=signed-session",
+    "__Host-mondat_session=signed.session",
   );
   assert.deepEqual(await forwardedRequest.json(), { title: "Teszt" });
   assert.equal(response.status, 303);
