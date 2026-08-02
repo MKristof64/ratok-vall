@@ -112,3 +112,19 @@ test("removes the starter preview and legacy provider auth surface", async () =>
   );
   await assert.rejects(access(new URL("app/chatgpt-auth.ts", projectRoot)));
 });
+
+test("removes the two retired homepage sections and their styles", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("app/page.tsx", projectRoot), "utf8"),
+    readFile(new URL("app/globals.css", projectRoot), "utf8"),
+  ]);
+
+  assert.doesNotMatch(
+    page,
+    /how-it-works|privacy-note|Három egyszerű lépés|A mondat számít/,
+  );
+  assert.doesNotMatch(
+    styles,
+    /\.how-it-works|\.steps-grid|\.step-card|\.step-number|\.privacy-note|\.privacy-symbol/,
+  );
+});
