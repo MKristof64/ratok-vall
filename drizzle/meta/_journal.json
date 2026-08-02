@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1785681246481,
+      "tag": "0000_lively_tombstone",
+      "breakpoints": true
+    }
+  ]
+}
